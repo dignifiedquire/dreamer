@@ -4,7 +4,7 @@ use egui::{
 };
 
 use crate::{
-    app::{FONT_SF_PRO_REGULAR, FONT_SF_PRO_SEMIBOLD},
+    app::{FONT_SF_PRO_REGULAR, FONT_SF_PRO_SEMIBOLD, FONT_SF_PRO_THIN},
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
     image,
     state::{AppState, Command},
@@ -104,15 +104,21 @@ fn view_avatar_message(
         let account_id = shared_state.selected_account.unwrap_or_default();
         let chat_id = shared_state.selected_chat_id.unwrap_or_default();
         let id = format!("profile-image-{}-{}-{}", account_id, chat_id, msg.from_id);
-        let image = state.get_or_load_image(ui.ctx(), id, |_name| {
-            if let Some(ref path) = msg.from_profile_image {
-                image::load_image_from_path(path).unwrap()
-            } else {
-                image::default_avatar(&msg.from_first_name, msg.from_color)
-            }
-        });
 
-        ui.image(image.id(), [40., 40.]);
+        let image_path = msg.from_profile_image.clone();
+        let msg_name = msg.from_first_name.clone();
+        let msg_color = msg.from_color;
+        if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+            if let Some(ref path) = image_path {
+                image::load_image_from_path(path)
+            } else {
+                Ok(image::default_avatar(&msg_name, msg_color))
+            }
+        }) {
+            ui.image(image.id(), [40., 40.]);
+        } else {
+            ui.add_space(40.);
+        }
 
         ui.vertical(|ui| {
             ui.label(
@@ -122,15 +128,7 @@ fn view_avatar_message(
                     .color(text_color),
             );
 
-            // TODO: render other message types
-            if let Some(ref text) = msg.text {
-                ui.label(
-                    RichText::new(text)
-                        .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
-                        .size(16.)
-                        .color(text_color),
-                );
-            }
+            view_inner_message(ui, state, shared_state, msg);
         });
     });
 }
@@ -144,22 +142,48 @@ fn view_simple_message(
 ) {
     ui.horizontal(|ui| {
         ui.add_space(48.);
-        ui.horizontal_wrapped(|ui| {
-            let text_color = Color32::from_rgb(41, 51, 63);
+        view_inner_message(ui, state, shared_state, msg);
+    });
+}
 
-            // TODO: render other message types
+fn view_inner_message(
+    ui: &mut Ui,
+    state: &AppState,
+    shared_state: &SharedState,
+    msg: &InnerChatMessage,
+) {
+    ui.horizontal_wrapped(|ui| {
+        let text_color = Color32::from_rgb(41, 51, 63);
+        ui.visuals_mut().override_text_color = Some(text_color);
 
-            ui.vertical(|ui| {
-                match msg.viewtype {
-                    Viewtype::Image | Viewtype::Gif => {
-                        if let Some(ref path) = msg.file {
-                            let account_id = shared_state.selected_account.unwrap_or_default();
-                            let chat_id = shared_state.selected_chat_id.unwrap_or_default();
-                            let id = format!("image-{}-{}-{}", account_id, chat_id, msg.id);
-                            let image = state.get_or_load_image(ui.ctx(), id, |_name| {
-                                image::load_image_from_path(path).unwrap()
-                            });
+        // TODO: render other message types
 
+        ui.vertical(|ui| {
+            if let Some(text) = msg.quote.as_ref().and_then(|q| q.text.as_ref()) {
+                // TODO: render other types than text
+                ui.horizontal(|ui| {
+                    ui.add_space(10.);
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(
+                            RichText::new(text)
+                                .family(egui::FontFamily::Name(FONT_SF_PRO_THIN.into()))
+                                .size(16.)
+                                .color(text_color),
+                        );
+                    });
+                });
+            }
+
+            match msg.viewtype {
+                Viewtype::Image | Viewtype::Gif => {
+                    if let Some(path) = msg.file.clone() {
+                        let account_id = shared_state.selected_account.unwrap_or_default();
+                        let chat_id = shared_state.selected_chat_id.unwrap_or_default();
+                        let id = format!("image-{}-{}-{}", account_id, chat_id, msg.id);
+
+                        if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+                            image::load_image_from_path(&path)
+                        }) {
                             let max_width = ui.available_width() - 10.;
                             let image_size = image.size();
 
@@ -174,38 +198,33 @@ fn view_simple_message(
                             ui.image(image.id(), size);
                         }
                     }
-                    Viewtype::Audio => {
-                        ui.label("Audio is not yet supported");
-                    }
-                    Viewtype::Sticker => {
-                        ui.label("Sticker is not yet supported");
-                    }
-                    Viewtype::Video => {
-                        ui.label("Video is not yet supported");
-                    }
-                    Viewtype::VideochatInvitation => {
-                        ui.label("Video Chat Invitation is not yet supported");
-                    }
-                    Viewtype::Voice => {
-                        ui.label("Voice is not yet supported");
-                    }
-                    Viewtype::File => {
-                        ui.label("File is not yet supported");
-                    }
-                    Viewtype::Unknown => {}
-                    Viewtype::Text => { /* Text rendering is done below */ }
                 }
-
-                // render additional in all cases text
-                if let Some(ref text) = msg.text {
+                Viewtype::Audio
+                | Viewtype::Sticker
+                | Viewtype::Video
+                | Viewtype::VideochatInvitation
+                | Viewtype::Voice
+                | Viewtype::File => {
                     ui.label(
-                        RichText::new(text)
+                        RichText::new(&format!("{:?} not yet supported", msg.viewtype))
                             .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
-                            .size(16.)
+                            .size(14.)
                             .color(text_color),
                     );
                 }
-            });
+                Viewtype::Unknown => {}
+                Viewtype::Text => { /* Text rendering is done below */ }
+            }
+
+            // render additional in all cases text
+            if let Some(ref text) = msg.text {
+                ui.label(
+                    RichText::new(text)
+                        .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
+                        .size(16.)
+                        .color(text_color),
+                );
+            }
         });
     });
 }

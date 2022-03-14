@@ -394,7 +394,7 @@ async fn refresh_message_list(
     let total_len = chat_items.len();
 
     // default to the last n items
-    let range = range.unwrap_or_else(|| (total_len.saturating_sub(40), total_len));
+    let range = range.unwrap_or_else(|| (total_len.saturating_sub(50), total_len));
 
     info!(
         "loading chat messages {:?} from ({}..={})",

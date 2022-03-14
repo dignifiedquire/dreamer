@@ -63,15 +63,21 @@ fn view_chat(ui: &mut Ui, state: &AppState, shared_state: &SharedState, chat: &C
                 let account_id = shared_state.selected_account.unwrap_or_default();
                 let chat_id = chat.id;
                 let id = format!("profile-chat-image-{}-{}", account_id, chat_id);
-                let image = state.get_or_load_image(ui.ctx(), id, |_name| {
-                    if let Some(ref path) = chat.profile_image {
-                        image::load_image_from_path(path).unwrap()
-                    } else {
-                        image::default_avatar(&chat.name, chat.color)
-                    }
-                });
 
-                ui.image(image.id(), [40., 40.]);
+                let profile_image = chat.profile_image.clone();
+                let chat_name = chat.name.clone();
+                let chat_color = chat.color;
+                if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+                    if let Some(ref path) = profile_image {
+                        image::load_image_from_path(path)
+                    } else {
+                        Ok(image::default_avatar(&chat_name, chat_color))
+                    }
+                }) {
+                    ui.image(image.id(), [40., 40.]);
+                } else {
+                    ui.add_space(40.);
+                }
 
                 ui.vertical(|ui| {
                     ui.label(

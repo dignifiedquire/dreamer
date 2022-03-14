@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -18,7 +17,7 @@ pub struct AppState {
     pub commands: async_std::channel::Sender<Command>,
     pub current_input: String,
 
-    pub image_cache: RefCell<HashMap<String, TextureHandle>>,
+    pub image_cache: Arc<RwLock<HashMap<String, TextureHandle>>>,
 }
 
 #[derive(Debug)]
@@ -192,19 +191,43 @@ impl AppState {
             .expect("failed to send cmd");
     }
 
-    pub fn get_or_load_image(
+    pub fn get_or_load_image<E>(
         &self,
         ctx: &Context,
         name: String,
-        load: impl Fn(&str) -> ColorImage,
-    ) -> TextureHandle {
-        self.image_cache
-            .borrow_mut()
-            .entry(name)
-            .or_insert_with_key(|name| {
-                let image_data = load(name);
-                ctx.load_texture(name, image_data)
-            })
-            .clone()
+        load: impl Fn(&str) -> Result<ColorImage, E> + Send + Sync + 'static,
+    ) -> Option<TextureHandle>
+    where
+        E: std::fmt::Debug + Send,
+    {
+        let image_cache = self.image_cache.clone();
+        let name2 = name.clone();
+        let val =
+            async_std::task::block_on(async move { image_cache.read().await.get(&name2).cloned() });
+
+        if val.is_none() {
+            // Lazy load
+            let ctx = ctx.clone();
+            let image_cache = self.image_cache.clone();
+            async_std::task::spawn(async move {
+                match load(&name) {
+                    Ok(image_data) => {
+                        let name2 = name.clone();
+                        let ctx2 = ctx.clone();
+                        let texture = async_std::task::spawn_blocking(move || {
+                            ctx2.load_texture(&name2, image_data)
+                        })
+                        .await;
+                        image_cache.write().await.insert(name, texture);
+                        ctx.request_repaint();
+                    }
+                    Err(err) => {
+                        log::warn!("failed to load image \"{}\": {:?} ", name, err);
+                    }
+                }
+            });
+        }
+
+        val
     }
 }
