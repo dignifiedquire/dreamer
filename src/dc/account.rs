@@ -22,7 +22,7 @@ use serde::Serialize;
 
 #[cfg(not(target_os = "linux"))]
 lazy_static! {
-    pub static ref HOME_DIR: PathBuüf = dirs::home_dir()
+    pub static ref HOME_DIR: PathBuf = dirs::home_dir()
         .unwrap_or_else(|| "home".into())
         .join(".deltachat")
         .into();
