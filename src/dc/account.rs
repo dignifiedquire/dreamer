@@ -20,9 +20,18 @@ use log::*;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::Serialize;
 
+#[cfg(not(target_os = "linux"))]
+lazy_static! {
+    pub static ref HOME_DIR: PathBuüf = dirs::home_dir()
+        .unwrap_or_else(|| "home".into())
+        .join(".deltachat")
+        .into();
+}
+
+#[cfg(target_os = "linux")]
 lazy_static! {
     pub static ref HOME_DIR: PathBuf = dirs::home_dir()
-        .unwrap_or_else(|| "home".into())
+        .unwrap_or_else(|| "home/.config/DeltaChat".into())
         .join(".deltachat")
         .into();
 }
