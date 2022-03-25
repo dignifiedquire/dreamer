@@ -513,7 +513,6 @@ impl LocalStateInner {
         // load accounts from default dir
         let mut account_states = HashMap::new();
         let accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone()).await?;
-
         let account_ids = accounts.get_all().await;
 
         if account_ids.len() == 0 {
