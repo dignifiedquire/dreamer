@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use egui::{style::Margin, Color32, Frame, RichText, ScrollArea, Sense, SidePanel, Stroke, Ui};
 
 use crate::{
-    app::{FONT_SF_PRO_REGULAR, FONT_SF_PRO_SEMIBOLD},
+    app::{FONT_REGULAR, FONT_SEMI_BOLD},
     dc::types::{ChatState, SharedState},
     image,
     state::{AppState, Command},
@@ -82,13 +82,13 @@ fn view_chat(ui: &mut Ui, state: &AppState, shared_state: &SharedState, chat: &C
                 ui.vertical(|ui| {
                     ui.label(
                         RichText::new(truncate(&chat.name, 20).as_ref())
-                            .family(egui::FontFamily::Name(FONT_SF_PRO_SEMIBOLD.into()))
+                            .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
                             .size(16.),
                     );
 
                     ui.label(
                         RichText::new(truncate(&chat.preview, 30).as_ref())
-                            .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
+                            .family(egui::FontFamily::Name(FONT_REGULAR.into()))
                             .size(14.),
                     );
                 });
