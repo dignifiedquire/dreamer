@@ -31,8 +31,8 @@ lazy_static! {
 #[cfg(target_os = "linux")]
 lazy_static! {
     pub static ref HOME_DIR: PathBuf = dirs::home_dir()
-        .unwrap_or_else(|| "home/.config/DeltaChat".into())
-        .join(".deltachat")
+        .unwrap_or_else(|| "home".into())
+        .join(".config/DeltaChat/accounts")
         .into();
 }
 
