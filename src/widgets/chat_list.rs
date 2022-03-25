@@ -23,7 +23,9 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                         let shared_state = state.shared_state();
                         let chats = &shared_state.chat_list;
 
-                        for chat in &chats.chats {
+                        let chat_len = chats.chats.len();
+
+                        for (i, chat) in chats.chats.iter().enumerate() {
                             let bg_color =
                                 if Some(chat.id) == shared_state.shared_state.selected_chat_id {
                                     Color32::from_rgb(236, 238, 249)
@@ -35,8 +37,19 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                                 .fill(bg_color)
                                 .margin(Margin::same(5.0))
                                 .show(ui, |ui| {
-                                    view_chat(ui, state, &shared_state.shared_state, chat)
+                                    view_chat(ui, state, &shared_state.shared_state, chat);
                                 });
+
+                            // add a seperator between all chats
+                            if i < chat_len - 1 {
+                                ui.vertical(|ui| {
+                                    ui.scope(|ui| {
+                                        ui.visuals_mut().widgets.noninteractive.bg_stroke =
+                                            Stroke::new(1., Color32::from_rgb(236, 237, 241));
+                                        ui.separator();
+                                    });
+                                });
+                            }
                         }
                     });
                 })
@@ -91,12 +104,6 @@ fn view_chat(ui: &mut Ui, state: &AppState, shared_state: &SharedState, chat: &C
                             .family(egui::FontFamily::Name(FONT_REGULAR.into()))
                             .size(14.),
                     );
-                });
-
-                ui.scope(|ui| {
-                    ui.visuals_mut().widgets.noninteractive.bg_stroke =
-                        Stroke::new(1., Color32::from_rgb(236, 237, 241));
-                    ui.separator();
                 });
             })
         })
