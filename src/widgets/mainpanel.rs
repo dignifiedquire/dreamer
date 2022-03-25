@@ -10,20 +10,38 @@ use crate::{
     state::{AppState, Command},
 };
 
-const INPUT_HEIGHT: f32 = 50.;
-
 pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
-        .frame(
-            Frame::default()
-                .fill(Color32::WHITE)
-                .margin(Margin::same(5.)),
-        )
+        .frame(Frame::default().fill(Color32::WHITE))
         .show(ctx, |ui| {
+            TopBottomPanel::bottom("input")
+                .frame(
+                    Frame::default()
+                        .fill(Color32::LIGHT_GRAY)
+                        .margin(Margin::same(2.)),
+                )
+                .show_inside(ui, |ui| {
+                    ui.with_layout(
+                        egui::Layout::top_down_justified(egui::Align::Center),
+                        |ui| {
+                            let response =
+                                ui.add(egui::TextEdit::singleline(&mut state.current_input));
+                            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
+                                let message = std::mem::take(&mut state.current_input);
+                                state.send_command(Command::SendTextMessage(message));
+                            }
+                        },
+                    )
+                });
+
             TopBottomPanel::top("chat")
-                .frame(Frame::default().fill(Color32::WHITE))
-                .min_height(ui.available_height() - INPUT_HEIGHT)
-                .max_height(ui.available_height() - INPUT_HEIGHT)
+                .frame(
+                    Frame::default()
+                        .fill(Color32::WHITE)
+                        .margin(Margin::same(5.)),
+                )
+                .min_height(ui.available_height() - 10.) // somehow we need to manually substract margin
+                .max_height(ui.available_height() - 10.)
                 .show_inside(ui, |ui| {
                     ScrollArea::vertical()
                         .stick_to_bottom()
@@ -38,20 +56,6 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                 }
                             });
                         });
-                });
-            TopBottomPanel::bottom("input")
-                .frame(Frame::default().fill(Color32::WHITE))
-                .show_inside(ui, |ui| {
-                    ui.with_layout(Layout::top_down_justified(egui::Align::Min), |ui| {
-                        ui.add_space(10.);
-                        let response = ui.add(egui::TextEdit::singleline(&mut state.current_input));
-
-                        if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                            let message = std::mem::take(&mut state.current_input);
-                            state.send_command(Command::SendTextMessage(message));
-                        }
-                        ui.add_space(10.);
-                    });
                 });
         });
 }
