@@ -17,9 +17,9 @@ impl App {
     }
 }
 
-pub const FONT_SF_PRO_THIN: &str = "SF Pro Text Thin";
-pub const FONT_SF_PRO_REGULAR: &str = "SF Pro Text Regular";
-pub const FONT_SF_PRO_SEMIBOLD: &str = "SF Pro Text Semibold";
+pub const FONT_LIGHT: &str = "OpenSans-Light";
+pub const FONT_REGULAR: &str = "OpenSans-Regular";
+pub const FONT_SEMI_BOLD: &str = "OpenSans-SemiBold";
 
 impl App {
     pub fn state(&self) -> &AppState {
@@ -62,21 +62,15 @@ impl epi::App for App {
             }
         };
 
-        load_font(FONT_SF_PRO_THIN, "/Library/Fonts/SF-Pro-Text-Thin.otf");
-        load_font(
-            FONT_SF_PRO_REGULAR,
-            "/Library/Fonts/SF-Pro-Text-Regular.otf",
-        );
-        load_font(
-            FONT_SF_PRO_SEMIBOLD,
-            "/Library/Fonts/SF-Pro-Text-Semibold.otf",
-        );
+        load_font(FONT_LIGHT, "./fonts/OpenSans-Light.ttf");
+        load_font(FONT_REGULAR, "./fonts/OpenSans-Regular.ttf");
+        load_font(FONT_SEMI_BOLD, "./fonts/OpenSans-SemiBold.ttf");
 
         fonts
             .families
             .get_mut(&FontFamily::Proportional)
             .unwrap()
-            .push(FONT_SF_PRO_REGULAR.to_string());
+            .push(FONT_REGULAR.to_string());
 
         ctx.set_fonts(fonts);
     }

@@ -4,7 +4,7 @@ use egui::{
 };
 
 use crate::{
-    app::{FONT_SF_PRO_REGULAR, FONT_SF_PRO_SEMIBOLD, FONT_SF_PRO_THIN},
+    app::{FONT_REGULAR, FONT_SEMI_BOLD, FONT_LIGHT},
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
     image,
     state::{AppState, Command},
@@ -79,7 +79,7 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) {
         if let Some(ref text) = msg.text {
             ui.label(
                 RichText::new(text)
-                    .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
+                    .family(egui::FontFamily::Name(FONT_REGULAR.into()))
                     .size(16.)
                     .color(text_color),
             );
@@ -123,7 +123,7 @@ fn view_avatar_message(
         ui.vertical(|ui| {
             ui.label(
                 RichText::new(&msg.from_first_name)
-                    .family(egui::FontFamily::Name(FONT_SF_PRO_SEMIBOLD.into()))
+                    .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
                     .size(16.)
                     .color(text_color),
             );
@@ -166,7 +166,7 @@ fn view_inner_message(
                     ui.horizontal_wrapped(|ui| {
                         ui.label(
                             RichText::new(text)
-                                .family(egui::FontFamily::Name(FONT_SF_PRO_THIN.into()))
+                                .family(egui::FontFamily::Name(FONT_LIGHT.into()))
                                 .size(16.)
                                 .color(text_color),
                         );
@@ -207,7 +207,7 @@ fn view_inner_message(
                 | Viewtype::File => {
                     ui.label(
                         RichText::new(&format!("{:?} not yet supported", msg.viewtype))
-                            .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
+                            .family(egui::FontFamily::Name(FONT_REGULAR.into()))
                             .size(14.)
                             .color(text_color),
                     );
@@ -220,7 +220,7 @@ fn view_inner_message(
             if let Some(ref text) = msg.text {
                 ui.label(
                     RichText::new(text)
-                        .family(egui::FontFamily::Name(FONT_SF_PRO_REGULAR.into()))
+                        .family(egui::FontFamily::Name(FONT_REGULAR.into()))
                         .size(16.)
                         .color(text_color),
                 );
