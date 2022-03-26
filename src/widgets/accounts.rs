@@ -17,7 +17,7 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                         .unwrap_or_else(|| &account.email);
 
                     ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
-                        Frame::none().margin(Margin::same(4.)).show(ui, |ui| {
+                        Frame::none().inner_margin(Margin::same(4.)).show(ui, |ui| {
                             let button = Button::new(
                                 RichText::new(name.chars().nth(0).unwrap())
                                     .color(Color32::WHITE)

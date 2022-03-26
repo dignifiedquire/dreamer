@@ -286,7 +286,7 @@ impl Account {
     ) -> Result<()> {
         if let Some(chat_id) = self.state.read().await.selected_chat_id {
             let mut msg = message::Message::new(
-                deltachat::constants::Viewtype::from_i32(typ.to_i32().unwrap()).unwrap(),
+                deltachat::message::Viewtype::from_i32(typ.to_i32().unwrap()).unwrap(),
             );
             msg.set_text(text);
             msg.set_file(path, mime.as_deref());

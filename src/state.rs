@@ -8,10 +8,9 @@ use log::{debug, error, info, warn};
 
 use crate::dc;
 use crate::dc::types::{ChatList, Event, Log, MessageList, SharedState};
-use crate::scheduler::Scheduler;
+//use crate::scheduler::Scheduler;
 
 pub struct AppState {
-    scheduler: Scheduler,
     shared_state: Arc<RwLock<State>>,
 
     pub commands: async_std::channel::Sender<Command>,
@@ -35,10 +34,8 @@ pub struct State {
 }
 
 impl AppState {
-    pub fn new(frame: &epi::Frame) -> Self {
+    pub fn new(ctx: &Context) -> Self {
         debug!("Setting up app state");
-        let mut scheduler = Scheduler::new();
-        scheduler.init(frame);
 
         let (dc_events_sender, mut dc_events_receiver) = async_std::channel::bounded(1000);
         let (commands_sender, mut commands_receiver) = async_std::channel::bounded(1000);
@@ -46,7 +43,8 @@ impl AppState {
         let shared_state = Arc::new(RwLock::new(State::default()));
 
         let ss = shared_state.clone();
-        scheduler.spawn(|repaint| async move {
+        let ctx = ctx.clone();
+        async_std::task::spawn(async move {
             let shared_state = ss;
             let dc_state = match dc::state::LocalState::new().await {
                 Ok(local_state) => local_state,
@@ -77,9 +75,7 @@ impl AppState {
                 dbg!(s);
             }
 
-            if let Some(ref r) = repaint {
-                r.request_repaint();
-            }
+            ctx.request_repaint();
 
             loop {
                 select! {
@@ -115,9 +111,7 @@ impl AppState {
                             }
                         }
                         // TODO: be more selective on when to repaint
-                        if let Some(ref r) = repaint {
-                            r.request_repaint();
-                        }
+                        ctx.request_repaint();
                     }
                     cmd = commands_receiver.select_next_some() => {
                         match cmd {
@@ -126,9 +120,7 @@ impl AppState {
                                 s.message_list = dc_state.select_chat(account, chat).await.unwrap();
                                 s.shared_state = dc_state.get_state().await;
 
-                                if let Some(ref r) = repaint {
-                                    r.request_repaint();
-                                }
+                                ctx.request_repaint();
                             }
                             Command::SelectAccount(account) => {
                                 info!("selecting account {}", account);
@@ -145,9 +137,7 @@ impl AppState {
                                     s.message_list.clear();
                                 }
 
-                                if let Some(ref r) = repaint {
-                                    r.request_repaint();
-                                }
+                                ctx.request_repaint();
                             }
                             Command::SendTextMessage(msg) => {
                                 dc_state.send_text_message(msg).await.unwrap();
@@ -159,7 +149,6 @@ impl AppState {
         });
 
         AppState {
-            scheduler,
             shared_state,
             current_input: Default::default(),
             commands: commands_sender,
@@ -168,19 +157,6 @@ impl AppState {
     }
 
     pub fn init(&mut self) {}
-
-    pub fn poll(&mut self, ctx: &Context) {
-        let mut repaint = false;
-        self.scheduler.poll();
-
-        // while let Ok(_) = self.receiver.try_recv() {
-        //     repaint = true;
-        // }
-
-        if repaint {
-            ctx.request_repaint();
-        }
-    }
 
     pub fn shared_state(&self) -> async_std::sync::RwLockReadGuard<'_, State> {
         async_std::task::block_on(async move { self.shared_state.read().await })

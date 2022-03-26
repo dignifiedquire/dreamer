@@ -1,9 +1,9 @@
 use async_std::task;
-use epi::backend::RepaintSignal;
+use epi::Frame;
 use std::{future::Future, sync::Arc};
 
 pub struct Scheduler {
-    repaint_signal: Option<Arc<dyn RepaintSignal>>,
+    repaint_signal: Option<Frame>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -16,13 +16,13 @@ impl Scheduler {
         }
     }
 
-    pub fn init(&mut self, frame: &epi::Frame) {
-        self.repaint_signal = Some(frame.0.lock().unwrap().repaint_signal.clone());
+    pub fn init(&mut self, frame: &Frame) {
+        self.repaint_signal = Some(frame.clone());
     }
 
     pub fn spawn<F, T>(&self, fut: F)
     where
-        F: FnOnce(Option<Arc<dyn RepaintSignal>>) -> T + Send + 'static,
+        F: FnOnce(Option<Frame>) -> T + Send + 'static,
         T: Future<Output = ()> + Send + 'static,
     {
         let repaint_signal = self.repaint_signal.clone();

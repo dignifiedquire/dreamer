@@ -35,7 +35,7 @@ pub fn render(ui: &mut Ui, state: &AppState) {
 
                             egui::Frame::none()
                                 .fill(bg_color)
-                                .margin(Margin::same(5.0))
+                                .inner_margin(Margin::same(5.0))
                                 .show(ui, |ui| {
                                     view_chat(ui, state, &shared_state.shared_state, chat);
                                 });

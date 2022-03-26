@@ -1,12 +1,12 @@
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, Frame, Layout, RichText, ScrollArea,
+    style::Margin, CentralPanel, Color32, Context, Frame, Label, Rect, RichText, ScrollArea, Shape,
     TopBottomPanel, Ui,
 };
 
 use crate::{
     app::{FONT_LIGHT, FONT_REGULAR, FONT_SEMI_BOLD},
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
-    image,
+    image::{self, color_from_u32},
     state::{AppState, Command},
 };
 
@@ -18,7 +18,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                 .frame(
                     Frame::default()
                         .fill(Color32::LIGHT_GRAY)
-                        .margin(Margin::same(2.)),
+                        .inner_margin(Margin::same(2.)),
                 )
                 .show_inside(ui, |ui| {
                     ui.with_layout(
@@ -38,7 +38,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                 .frame(
                     Frame::default()
                         .fill(Color32::WHITE)
-                        .margin(Margin::same(5.)),
+                        .inner_margin(Margin::same(5.)),
                 )
                 .min_height(ui.available_height() - 10.) // somehow we need to manually substract margin
                 .max_height(ui.available_height() - 10.)
@@ -50,9 +50,12 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                             ui.vertical(|ui| {
                                 let shared_state = state.shared_state();
                                 for msg in &shared_state.message_list.messages {
-                                    egui::Frame::none().margin(Margin::same(0.)).show(ui, |ui| {
-                                        view_message(ui, state, &shared_state.shared_state, msg)
-                                    });
+                                    egui::Frame::none().inner_margin(Margin::same(0.)).show(
+                                        ui,
+                                        |ui| {
+                                            view_message(ui, state, &shared_state.shared_state, msg)
+                                        },
+                                    );
                                 }
                             });
                         });
@@ -113,21 +116,40 @@ fn view_avatar_message(
         let chat_id = shared_state.selected_chat_id.unwrap_or_default();
         let id = format!("profile-image-{}-{}-{}", account_id, chat_id, msg.from_id);
 
-        let image_path = msg.from_profile_image.clone();
-        let msg_name = msg.from_first_name.clone();
-        let msg_color = msg.from_color;
-        if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
-            if let Some(ref path) = image_path {
-                image::load_image_from_path(path)
+        if let Some(image_path) = msg.from_profile_image.clone() {
+            if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+                image::load_image_from_path(&image_path)
+            }) {
+                ui.image(image.id(), [40., 40.]);
             } else {
-                Ok(image::default_avatar(&msg_name, msg_color))
+                ui.add_space(40.);
             }
-        }) {
-            ui.image(image.id(), [40., 40.]);
         } else {
-            ui.add_space(40.);
-        }
+            ui.group(|ui| {
+                ui.set_width(40.);
+                ui.set_height(40.);
+                // ui.painter().rect_filled(
+                //     Rect {
+                //         min: [0.; 2].into(),
+                //         max: [40.; 2].into(),
+                //     },
+                //     Rounding::same(5.),
+                //     // color_from_u32(msg.from_color),
+                //     Color32::GREEN,
+                // );
+                let icon = RichText::new(
+                    msg.from_first_name
+                        .get(0..1)
+                        .unwrap_or("x")
+                        .to_ascii_uppercase(),
+                )
+                .strong()
+                .size(22.)
+                .color(Color32::WHITE);
 
+                ui.add(Label::new(icon));
+            });
+        }
         ui.vertical(|ui| {
             ui.label(
                 RichText::new(&msg.from_first_name)
@@ -212,6 +234,7 @@ fn view_inner_message(
                 | Viewtype::Video
                 | Viewtype::VideochatInvitation
                 | Viewtype::Voice
+                | Viewtype::Webxdc
                 | Viewtype::File => {
                     ui.label(
                         RichText::new(&format!("{:?} not yet supported", msg.viewtype))

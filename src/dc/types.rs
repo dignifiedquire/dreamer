@@ -256,4 +256,5 @@ pub enum Viewtype {
     Video = 50,
     File = 60,
     VideochatInvitation = 70,
+    Webxdc = 80,
 }

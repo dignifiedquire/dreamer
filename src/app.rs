@@ -8,13 +8,7 @@ use crate::{
 };
 
 pub struct App {
-    state: Option<AppState>,
-}
-
-impl App {
-    pub fn new() -> Self {
-        App { state: None }
-    }
+    state: AppState,
 }
 
 pub const FONT_LIGHT: &str = "OpenSans-Light";
@@ -23,27 +17,15 @@ pub const FONT_SEMI_BOLD: &str = "OpenSans-SemiBold";
 
 impl App {
     pub fn state(&self) -> &AppState {
-        self.state.as_ref().expect("must be called after setup")
+        &self.state
     }
 
     pub fn state_mut(&mut self) -> &mut AppState {
-        self.state.as_mut().expect("must be called after setup")
-    }
-}
-
-impl epi::App for App {
-    fn name(&self) -> &str {
-        "Dreamer"
+        &mut self.state
     }
 
-    fn setup(
-        &mut self,
-        ctx: &egui::Context,
-        frame: &epi::Frame,
-        _storage: Option<&dyn epi::Storage>,
-    ) {
-        self.state = Some(AppState::new(frame));
-        ctx.set_visuals(Visuals::light());
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        cc.egui_ctx.set_visuals(Visuals::light());
 
         let mut fonts = FontDefinitions::default();
         let mut load_font = |name: &str, path| match fs::read(path) {
@@ -72,12 +54,16 @@ impl epi::App for App {
             .unwrap()
             .push(FONT_REGULAR.to_string());
 
-        ctx.set_fonts(fonts);
+        cc.egui_ctx.set_fonts(fonts);
+
+        App {
+            state: AppState::new(&cc.egui_ctx),
+        }
     }
+}
 
-    fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
-        self.state_mut().poll(ctx);
-
+impl epi::App for App {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut epi::Frame) {
         render_sidebar(ctx, self.state());
         render_main_panel(ctx, self.state_mut());
     }
