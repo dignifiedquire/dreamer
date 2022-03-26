@@ -1,14 +1,16 @@
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, Frame, Label, Rect, RichText, ScrollArea, Shape,
-    TopBottomPanel, Ui,
+    style::Margin, CentralPanel, Color32, Context, Frame, RichText, ScrollArea, TopBottomPanel, Ui,
+    Vec2,
 };
 
 use crate::{
     app::{FONT_LIGHT, FONT_REGULAR, FONT_SEMI_BOLD},
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
-    image::{self, color_from_u32},
+    image,
     state::{AppState, Command},
 };
+
+use super::avatar::Avatar;
 
 pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
@@ -125,30 +127,11 @@ fn view_avatar_message(
                 ui.add_space(40.);
             }
         } else {
-            ui.group(|ui| {
-                ui.set_width(40.);
-                ui.set_height(40.);
-                // ui.painter().rect_filled(
-                //     Rect {
-                //         min: [0.; 2].into(),
-                //         max: [40.; 2].into(),
-                //     },
-                //     Rounding::same(5.),
-                //     // color_from_u32(msg.from_color),
-                //     Color32::GREEN,
-                // );
-                let icon = RichText::new(
-                    msg.from_first_name
-                        .get(0..1)
-                        .unwrap_or("x")
-                        .to_ascii_uppercase(),
-                )
-                .strong()
-                .size(22.)
-                .color(Color32::WHITE);
-
-                ui.add(Label::new(icon));
-            });
+            ui.add(Avatar::new(
+                msg.from_first_name.to_string(),
+                Vec2::splat(40.),
+                image::color_from_u32(msg.from_color),
+            ));
         }
         ui.vertical(|ui| {
             ui.label(

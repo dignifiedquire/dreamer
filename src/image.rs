@@ -10,10 +10,6 @@ pub fn load_image_from_path(path: &std::path::Path) -> Result<egui::ColorImage, 
         pixels.as_slice(),
     ))
 }
-pub fn default_avatar(name: &str, color: u32) -> egui::ColorImage {
-    // TODO: render letters
-    egui::ColorImage::new([40, 40], color_from_u32(color))
-}
 
 pub fn color_from_u32(v: u32) -> Color32 {
     let b = 0b0000_0000_0000_0000_0000_0000_1111_1111 & v;

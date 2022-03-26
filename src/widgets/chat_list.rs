@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
-use egui::{style::Margin, Color32, Frame, RichText, ScrollArea, Sense, SidePanel, Stroke, Ui};
+use egui::{
+    style::Margin, Color32, Frame, RichText, ScrollArea, Sense, SidePanel, Stroke, Ui, Vec2,
+};
 
 use crate::{
     app::{FONT_REGULAR, FONT_SEMI_BOLD},
@@ -8,6 +10,8 @@ use crate::{
     image,
     state::{AppState, Command},
 };
+
+use super::avatar::Avatar;
 
 pub fn render(ui: &mut Ui, state: &AppState) {
     SidePanel::right("chatlist")
@@ -28,7 +32,7 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                         for (i, chat) in chats.chats.iter().enumerate() {
                             let bg_color =
                                 if Some(chat.id) == shared_state.shared_state.selected_chat_id {
-                                    Color32::from_rgb(236, 238, 249)
+                                    Color32::from_rgb(229, 253, 255)
                                 } else {
                                     Color32::TRANSPARENT
                                 };
@@ -77,19 +81,20 @@ fn view_chat(ui: &mut Ui, state: &AppState, shared_state: &SharedState, chat: &C
                 let chat_id = chat.id;
                 let id = format!("profile-chat-image-{}-{}", account_id, chat_id);
 
-                let profile_image = chat.profile_image.clone();
-                let chat_name = chat.name.clone();
-                let chat_color = chat.color;
-                if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
-                    if let Some(ref path) = profile_image {
-                        image::load_image_from_path(path)
+                if let Some(image_path) = chat.profile_image.clone() {
+                    if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+                        image::load_image_from_path(&image_path)
+                    }) {
+                        ui.image(image.id(), [40., 40.]);
                     } else {
-                        Ok(image::default_avatar(&chat_name, chat_color))
+                        ui.add_space(40.);
                     }
-                }) {
-                    ui.image(image.id(), [40., 40.]);
                 } else {
-                    ui.add_space(40.);
+                    ui.add(Avatar::new(
+                        chat.name.to_string(),
+                        Vec2::splat(40.),
+                        image::color_from_u32(chat.color),
+                    ));
                 }
 
                 ui.vertical(|ui| {
