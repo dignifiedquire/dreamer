@@ -8,6 +8,9 @@ pub fn render(ui: &mut Ui, state: &AppState) {
     let bg = Color32::from_rgb(22, 10, 76);
     SidePanel::left("accountlist")
         .frame(Frame::default().fill(bg))
+        .resizable(false)
+        .max_width(50.)
+        .min_width(50.)
         .show_inside(ui, |ui| {
             ScrollArea::vertical().show(ui, |ui| {
                 for (id, account) in accounts.iter() {
