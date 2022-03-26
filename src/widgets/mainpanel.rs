@@ -4,7 +4,7 @@ use egui::{
 };
 
 use crate::{
-    app::{FONT_REGULAR, FONT_SEMI_BOLD, FONT_LIGHT},
+    app::{FONT_LIGHT, FONT_REGULAR, FONT_SEMI_BOLD},
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
     image,
     state::{AppState, Command},
@@ -14,7 +14,11 @@ const INPUT_HEIGHT: f32 = 50.;
 
 pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
-        .frame(Frame::default().fill(Color32::WHITE))
+        .frame(
+            Frame::default()
+                .fill(Color32::WHITE)
+                .margin(Margin::same(5.)),
+        )
         .show(ctx, |ui| {
             TopBottomPanel::top("chat")
                 .frame(Frame::default().fill(Color32::WHITE))
