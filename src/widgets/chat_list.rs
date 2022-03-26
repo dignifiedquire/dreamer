@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use egui::{
-    style::Margin, Color32, Frame, RichText, ScrollArea, Sense, SidePanel, Stroke, Ui, Vec2,
+    style::Margin, Color32, Frame, RichText, Rounding, ScrollArea, Sense, SidePanel, Stroke, Ui,
+    Vec2,
 };
 
 use crate::{
@@ -81,21 +82,21 @@ fn view_chat(ui: &mut Ui, state: &AppState, shared_state: &SharedState, chat: &C
                 let chat_id = chat.id;
                 let id = format!("profile-chat-image-{}-{}", account_id, chat_id);
 
-                if let Some(image_path) = chat.profile_image.clone() {
-                    if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+                let image = chat.profile_image.clone().and_then(|image_path| {
+                    state.get_or_load_image(ui.ctx(), id, move |_name| {
                         image::load_image_from_path(&image_path)
-                    }) {
-                        ui.image(image.id(), [40., 40.]);
-                    } else {
-                        ui.add_space(40.);
-                    }
-                } else {
-                    ui.add(Avatar::new(
+                    })
+                });
+                ui.add(
+                    Avatar::new(
                         chat.name.to_string(),
                         Vec2::splat(40.),
                         image::color_from_u32(chat.color),
-                    ));
-                }
+                    )
+                    .rounding(Rounding::same(5.))
+                    .stroke(Stroke::new(1., Color32::WHITE))
+                    .image(image),
+                );
 
                 ui.vertical(|ui| {
                     ui.label(

@@ -1,4 +1,6 @@
-use egui::{Color32, CursorIcon, Frame, Layout, RichText, ScrollArea, SidePanel, Stroke, Ui, Vec2};
+use egui::{
+    Color32, CursorIcon, Frame, Layout, RichText, Rounding, ScrollArea, SidePanel, Stroke, Ui, Vec2,
+};
 
 use crate::state::{AppState, Command};
 
@@ -33,7 +35,8 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                         ui.set_height(40.);
                         let response = ui.add(
                             Avatar::new(name.to_string(), Vec2::splat(40.), fill)
-                                .stroke(Stroke::new(1., Color32::WHITE)),
+                                .stroke(Stroke::new(1., Color32::WHITE))
+                                .rounding(Rounding::same(5.)),
                         );
                         if response.clicked() {
                             state.send_command(Command::SelectAccount(*id));

@@ -1,7 +1,8 @@
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, Frame, RichText, ScrollArea, TopBottomPanel, Ui,
-    Vec2,
+    style::Margin, CentralPanel, Color32, Context, Frame, RichText, Rounding, ScrollArea,
+    TopBottomPanel, Ui, Vec2,
 };
+use epaint::Stroke;
 
 use crate::{
     app::{FONT_LIGHT, FONT_REGULAR, FONT_SEMI_BOLD},
@@ -134,21 +135,22 @@ fn view_avatar_message(
         let chat_id = shared_state.selected_chat_id.unwrap_or_default();
         let id = format!("profile-image-{}-{}-{}", account_id, chat_id, msg.from_id);
 
-        if let Some(image_path) = msg.from_profile_image.clone() {
-            if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
+        let image = msg.from_profile_image.clone().and_then(|image_path| {
+            state.get_or_load_image(ui.ctx(), id, move |_name| {
                 image::load_image_from_path(&image_path)
-            }) {
-                ui.image(image.id(), [40., 40.]);
-            } else {
-                ui.add_space(40.);
-            }
-        } else {
-            ui.add(Avatar::new(
+            })
+        });
+        ui.add(
+            Avatar::new(
                 msg.from_first_name.to_string(),
                 Vec2::splat(40.),
                 image::color_from_u32(msg.from_color),
-            ));
-        }
+            )
+            .rounding(Rounding::same(5.))
+            .stroke(Stroke::new(1., Color32::WHITE))
+            .image(image),
+        );
+
         ui.vertical(|ui| {
             ui.label(
                 RichText::new(&msg.from_first_name)
