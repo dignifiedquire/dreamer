@@ -3,6 +3,7 @@ use egui::{
     TopBottomPanel, Ui, Vec2,
 };
 use epaint::Stroke;
+use log::warn;
 
 use crate::{
     app::{FONT_LIGHT, FONT_REGULAR, FONT_SEMI_BOLD},
@@ -33,7 +34,9 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                 ui.add(egui::TextEdit::singleline(&mut state.current_input));
                             if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
                                 let message = std::mem::take(&mut state.current_input);
-                                state.send_command(Command::SendTextMessage(message));
+                                if message.len() > 0 {
+                                    state.send_command(Command::SendTextMessage(message));
+                                }
                             }
                         },
                     )
