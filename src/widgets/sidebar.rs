@@ -1,14 +1,11 @@
-use egui::{Color32, Context, Frame, SidePanel};
-
-use crate::state::AppState;
+use egui::{Context, Frame, SidePanel};
 
 use super::{accounts, chat_list};
+use crate::{state::AppState, ACCENT_COLOR};
 
 pub fn render_sidebar(ctx: &Context, state: &AppState) {
-    let bg = Color32::from_rgb(22, 10, 76);
-
     SidePanel::left("sidebar")
-        .frame(Frame::default().fill(bg))
+        .frame(Frame::default().fill(*ACCENT_COLOR))
         .default_width(330.)
         .min_width(330.)
         .max_width(330.)
