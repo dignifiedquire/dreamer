@@ -108,9 +108,15 @@ fn view_message(ui: &mut Ui, state: &AppState, shared_state: &SharedState, msg: 
             }
         }
         ChatMessage::DayMarker(time) => {
-            ui.add_space(10.);
-            ui.label(time.to_rfc2822());
-            ui.add_space(10.);
+            // FIXME: make gray backround only as big as needed (not full width)
+            ui.vertical_centered(|ui| {
+                Frame::none()
+                    .fill(Color32::from_gray(250))
+                    .rounding(4.)
+                    .show(ui, |ui| {
+                        ui.label(time.format("%Y-%m-%d").to_string());
+                    });
+            });
         }
     });
 }
