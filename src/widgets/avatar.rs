@@ -1,7 +1,7 @@
 use egui::widgets::Image;
 use egui::{
-    style::Margin, Color32, Label, Layout, Rect, Response, RichText, Rounding, Sense, Shape,
-    Stroke, TextureHandle, Ui, Vec2, Widget,
+    style::Margin, Color32, Layout, Response, RichText, Rounding, Sense, Stroke, TextureHandle, Ui,
+    Vec2, Widget,
 };
 use egui::{TextStyle, WidgetText};
 
