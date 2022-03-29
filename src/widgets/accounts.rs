@@ -1,17 +1,17 @@
-use egui::{
-    Color32, CursorIcon, Frame, Layout, RichText, Rounding, ScrollArea, SidePanel, Stroke, Ui, Vec2,
-};
+use egui::{Color32, CursorIcon, Frame, Rounding, ScrollArea, SidePanel, Stroke, Ui, Vec2};
 
-use crate::state::{AppState, Command};
+use crate::{
+    state::{AppState, Command},
+    ACCENT_COLOR,
+};
 
 use super::avatar::Avatar;
 
 pub fn render(ui: &mut Ui, state: &AppState) {
     let shared_state = state.shared_state();
     let accounts = &shared_state.shared_state.accounts;
-    let bg = Color32::from_rgb(22, 10, 76);
     SidePanel::left("accountlist")
-        .frame(Frame::default().fill(bg))
+        .frame(Frame::default().fill(*ACCENT_COLOR))
         .resizable(false)
         .max_width(50.)
         .min_width(50.)

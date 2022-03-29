@@ -16,7 +16,7 @@ use super::avatar::Avatar;
 
 pub fn render(ui: &mut Ui, state: &AppState) {
     SidePanel::right("chatlist")
-        .frame(Frame::default().fill(Color32::WHITE))
+        .frame(Frame::default().inner_margin(2.))
         .min_width(280.)
         .max_width(280.)
         .resizable(false)
