@@ -10,7 +10,7 @@ use crate::{
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
     image,
     state::{AppState, Command},
-    ACCENT_COLOR,
+    ACCENT_COLOR, ACCENT_COLOR_STRONG,
 };
 
 use super::avatar::Avatar;
@@ -23,26 +23,33 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
             TopBottomPanel::bottom("input")
                 .frame(
                     Frame::default()
-                        .fill(Color32::LIGHT_GRAY)
-                        .inner_margin(Margin::same(2.)),
+                        .inner_margin(Margin::same(10.))
+                        .fill(Color32::WHITE),
                 )
                 .show_inside(ui, |ui| {
                     ui.with_layout(
                         egui::Layout::top_down_justified(egui::Align::Center),
                         |ui| {
-                            let response =
-                                ui.add(egui::TextEdit::singleline(&mut state.current_input));
-                            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                                let message = std::mem::take(&mut state.current_input);
-                                if message.len() > 0 {
-                                    state.send_command(Command::SendTextMessage(message));
-                                }
+                            Frame::none()
+                                .inner_margin(2.)
+                                .fill(Color32::GRAY)
+                                .show(ui, |ui| {
+                                    let response = ui
+                                        .add(egui::TextEdit::singleline(&mut state.current_input));
+                                    if response.lost_focus()
+                                        && ui.input().key_pressed(egui::Key::Enter)
+                                    {
+                                        let message = std::mem::take(&mut state.current_input);
+                                        if message.len() > 0 {
+                                            state.send_command(Command::SendTextMessage(message));
+                                        }
 
-                                let text_edit_id = response.id;
+                                        let text_edit_id = response.id;
 
-                                // reselect focus
-                                ui.ctx().memory().request_focus(text_edit_id);
-                            }
+                                        // reselect focus
+                                        ui.ctx().memory().request_focus(text_edit_id);
+                                    }
+                                })
                         },
                     )
                 });
@@ -122,7 +129,10 @@ fn view_message(ui: &mut Ui, state: &AppState, shared_state: &SharedState, msg: 
                     .fill(Color32::from_gray(250))
                     .rounding(4.)
                     .show(ui, |ui| {
-                        ui.label(time.format("%Y-%m-%d").to_string());
+                        ui.label(
+                            RichText::new(time.format("%Y-%m-%d").to_string())
+                                .color(*ACCENT_COLOR_STRONG),
+                        );
                     });
             });
         }
