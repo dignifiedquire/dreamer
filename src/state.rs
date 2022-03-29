@@ -11,7 +11,7 @@ use crate::dc::types::{ChatList, Event, Log, MessageList, SharedState};
 //use crate::scheduler::Scheduler;
 
 pub struct AppState {
-    shared_state: Arc<RwLock<State>>,
+    pub shared_state: Arc<RwLock<State>>,
 
     pub commands: async_std::channel::Sender<Command>,
     pub current_input: String,
@@ -24,6 +24,8 @@ pub enum Command {
     SelectChat(u32, u32),
     SelectAccount(u32),
     SendTextMessage(String),
+    Login(String, String),
+    CloseSidePanel,
 }
 
 #[derive(Debug, Default)]
@@ -141,6 +143,16 @@ impl AppState {
                             }
                             Command::SendTextMessage(msg) => {
                                 dc_state.send_text_message(msg).await.unwrap();
+                            }
+                            Command::Login(email, password) => {
+                                let email = email.to_lowercase();
+                                let (id, dc_ctx) = dc_state.add_account().await.unwrap();
+                                // FIXME: Don't unwrap this because it's likely to fail
+                                dc_state.login(id, &dc_ctx, &email, &password).await.unwrap();
+                                ctx.request_repaint();
+                            }
+                            Command::CloseSidePanel => {
+
                             }
                         }
                     }
