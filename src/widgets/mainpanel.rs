@@ -18,6 +18,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
         .frame(Frame::default().fill(Color32::WHITE))
         .show(ctx, |ui| {
+            // show the input-field for new messages
             TopBottomPanel::bottom("input")
                 .frame(
                     Frame::default()
@@ -40,8 +41,8 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
 
             TopBottomPanel::top("chat")
                 .frame(Frame::default().fill(Color32::WHITE))
-                .min_height(ui.available_height() - 10.) // somehow we need to manually substract margin
-                .max_height(ui.available_height() - 10.)
+                .min_height(ui.available_height())
+                .max_height(ui.available_height())
                 .show_inside(ui, |ui| {
                     ui.vertical(|ui| {
                         ui.vertical(|ui| {
@@ -66,7 +67,6 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                             .color(Color32::LIGHT_GRAY),
                                         );
                                     });
-                                ui.add_space(10.);
                             }
                         });
                         Frame::none().inner_margin(Margin::same(5.)).show(ui, |ui| {
@@ -108,9 +108,15 @@ fn view_message(ui: &mut Ui, state: &AppState, shared_state: &SharedState, msg: 
             }
         }
         ChatMessage::DayMarker(time) => {
-            ui.add_space(10.);
-            ui.label(time.to_rfc2822());
-            ui.add_space(10.);
+            // FIXME: make gray backround only as big as needed (not full width)
+            ui.vertical_centered(|ui| {
+                Frame::none()
+                    .fill(Color32::from_gray(250))
+                    .rounding(4.)
+                    .show(ui, |ui| {
+                        ui.label(time.format("%Y-%m-%d").to_string());
+                    });
+            });
         }
     });
 }
