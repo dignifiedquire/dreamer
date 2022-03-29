@@ -102,13 +102,13 @@ fn view_chat(ui: &mut Ui, state: &AppState, shared_state: &SharedState, chat: &C
                     ui.label(
                         RichText::new(truncate(&chat.name, 20).as_ref())
                             .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
-                            .size(16.),
+                            .size(18.),
                     );
 
                     ui.label(
                         RichText::new(truncate(&chat.preview, 30).as_ref())
                             .family(egui::FontFamily::Name(FONT_REGULAR.into()))
-                            .size(14.),
+                            .size(18.),
                     );
                 });
             })

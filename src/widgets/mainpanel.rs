@@ -137,7 +137,7 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) {
                     .color(text_color),
             );
         } else {
-            log::warn!("missing text on info message");
+            warn!("missing text on info message");
         }
     });
 }
@@ -178,7 +178,7 @@ fn view_avatar_message(
             ui.label(
                 RichText::new(&msg.from_first_name)
                     .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
-                    .size(16.)
+                    .size(18.)
                     .color(text_color),
             );
 
@@ -215,15 +215,15 @@ fn view_inner_message(
         ui.vertical(|ui| {
             if let Some(text) = msg.quote.as_ref().and_then(|q| q.text.as_ref()) {
                 // TODO: render other types than text
+
                 ui.horizontal(|ui| {
                     ui.add_space(10.);
                     ui.horizontal_wrapped(|ui| {
-                        ui.label(
-                            RichText::new(text)
-                                .family(egui::FontFamily::Name(FONT_LIGHT.into()))
-                                .size(16.)
-                                .color(text_color),
-                        );
+                        let text = RichText::new(text)
+                            .family(egui::FontFamily::Name(FONT_LIGHT.into()))
+                            .size(18.)
+                            .color(text_color);
+                        ui.label(text);
                     });
                 });
             }
@@ -276,7 +276,7 @@ fn view_inner_message(
                 ui.label(
                     RichText::new(text)
                         .family(egui::FontFamily::Name(FONT_REGULAR.into()))
-                        .size(16.)
+                        .size(18.)
                         .color(text_color),
                 );
             }
