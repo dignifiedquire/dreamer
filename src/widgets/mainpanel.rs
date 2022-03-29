@@ -9,6 +9,7 @@ use crate::{
     dc::types::{ChatMessage, InnerChatMessage, SharedState, Viewtype},
     image,
     state::{AppState, Command},
+    ACCENT_COLOR,
 };
 
 use super::avatar::Avatar;
@@ -38,45 +39,58 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                 });
 
             TopBottomPanel::top("chat")
-                .frame(
-                    Frame::default()
-                        .fill(Color32::WHITE)
-                        .inner_margin(Margin::same(5.)),
-                )
+                .frame(Frame::default().fill(Color32::WHITE))
                 .min_height(ui.available_height() - 10.) // somehow we need to manually substract margin
                 .max_height(ui.available_height() - 10.)
                 .show_inside(ui, |ui| {
                     ui.vertical(|ui| {
                         ui.vertical(|ui| {
-                            ui.set_min_height(50.);
                             let chat = state.shared_state().shared_state.selected_chat.clone();
                             if let Some(chat) = chat {
-                                ui.heading(format!("#{}", chat.name));
-                                ui.label(format!("Members: {}", chat.member_count));
-                            }
-                            ui.add_space(10.);
-                        });
-                        ScrollArea::vertical()
-                            .stick_to_bottom()
-                            .auto_shrink([false; 2])
-                            .show(ui, |ui| {
-                                ui.vertical(|ui| {
-                                    let shared_state = state.shared_state();
-                                    for msg in &shared_state.message_list.messages {
-                                        egui::Frame::none().inner_margin(Margin::same(0.)).show(
-                                            ui,
-                                            |ui| {
-                                                view_message(
-                                                    ui,
-                                                    state,
-                                                    &shared_state.shared_state,
-                                                    msg,
-                                                )
-                                            },
+                                ui.set_min_height(50.);
+                                Frame::none()
+                                    .fill(*ACCENT_COLOR)
+                                    .inner_margin(5.)
+                                    .show(ui, |ui| {
+                                        ui.set_width(ui.available_width());
+
+                                        ui.heading(
+                                            RichText::new(format!("#{}", chat.name))
+                                                .color(Color32::WHITE),
                                         );
-                                    }
+                                        ui.label(
+                                            RichText::new(format!(
+                                                "Members: {}",
+                                                chat.member_count
+                                            ))
+                                            .color(Color32::LIGHT_GRAY),
+                                        );
+                                    });
+                                ui.add_space(10.);
+                            }
+                        });
+                        Frame::none().inner_margin(Margin::same(5.)).show(ui, |ui| {
+                            ScrollArea::vertical()
+                                .stick_to_bottom()
+                                .auto_shrink([false; 2])
+                                .show(ui, |ui| {
+                                    ui.vertical(|ui| {
+                                        let shared_state = state.shared_state();
+                                        for msg in &shared_state.message_list.messages {
+                                            egui::Frame::none()
+                                                .inner_margin(Margin::same(0.))
+                                                .show(ui, |ui| {
+                                                    view_message(
+                                                        ui,
+                                                        state,
+                                                        &shared_state.shared_state,
+                                                        msg,
+                                                    )
+                                                });
+                                        }
+                                    });
                                 });
-                            });
+                        });
                     });
                 });
         });
