@@ -1,8 +1,8 @@
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, Frame, RichText, Rounding, ScrollArea,
-    TopBottomPanel, Ui, Vec2,
+    style::Margin, CentralPanel, Color32, Context, FontSelection, Frame, RichText, Rounding,
+    ScrollArea, TextEdit, TopBottomPanel, Ui, Vec2,
 };
-use epaint::Stroke;
+use epaint::{FontId, Stroke};
 use log::warn;
 
 use crate::{
@@ -132,9 +132,9 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) {
         if let Some(ref text) = msg.text {
             ui.label(
                 RichText::new(text)
-                    .family(egui::FontFamily::Name(FONT_REGULAR.into()))
                     .size(16.)
-                    .color(text_color),
+                    .color(text_color)
+                    .family(egui::FontFamily::Name(FONT_REGULAR.into())),
             );
         } else {
             warn!("missing text on info message");
@@ -219,11 +219,12 @@ fn view_inner_message(
                 ui.horizontal(|ui| {
                     ui.add_space(10.);
                     ui.horizontal_wrapped(|ui| {
-                        let text = RichText::new(text)
-                            .family(egui::FontFamily::Name(FONT_LIGHT.into()))
-                            .size(18.)
-                            .color(text_color);
-                        ui.label(text);
+                        ui.add(selectable_text(
+                            &mut text.as_str(),
+                            18.,
+                            FONT_LIGHT,
+                            text_color,
+                        ));
                     });
                 });
             }
@@ -260,12 +261,13 @@ fn view_inner_message(
                 | Viewtype::Voice
                 | Viewtype::Webxdc
                 | Viewtype::File => {
-                    ui.label(
-                        RichText::new(&format!("{:?} not yet supported", msg.viewtype))
-                            .family(egui::FontFamily::Name(FONT_REGULAR.into()))
-                            .size(14.)
-                            .color(text_color),
-                    );
+                    let content = format!("{:?} not yet supported", msg.viewtype);
+                    ui.add(selectable_text(
+                        &mut content.as_str(),
+                        14.,
+                        FONT_REGULAR,
+                        text_color,
+                    ));
                 }
                 Viewtype::Unknown => {}
                 Viewtype::Text => { /* Text rendering is done below */ }
@@ -273,13 +275,27 @@ fn view_inner_message(
 
             // render additional in all cases text
             if let Some(ref text) = msg.text {
-                ui.label(
-                    RichText::new(text)
-                        .family(egui::FontFamily::Name(FONT_REGULAR.into()))
-                        .size(18.)
-                        .color(text_color),
-                );
+                ui.add(selectable_text(
+                    &mut text.as_str(),
+                    18.,
+                    FONT_REGULAR,
+                    text_color,
+                ));
             }
         });
     });
+}
+
+fn selectable_text<'a>(
+    content: &'a mut &'a str,
+    size: f32,
+    font_name: &str,
+    color: Color32,
+) -> TextEdit<'a> {
+    TextEdit::multiline(content)
+        .font(FontId::new(size, egui::FontFamily::Name(font_name.into())))
+        .text_color(color)
+        .desired_rows(1)
+        .desired_width(f32::INFINITY)
+        .frame(false)
 }
