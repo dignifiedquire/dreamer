@@ -37,6 +37,11 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                 if message.len() > 0 {
                                     state.send_command(Command::SendTextMessage(message));
                                 }
+
+                                let text_edit_id = response.id;
+
+                                // reselect focus
+                                ui.ctx().memory().request_focus(text_edit_id);
                             }
                         },
                     )
