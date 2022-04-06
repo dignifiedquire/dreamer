@@ -70,7 +70,7 @@ impl App {
 
 impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut epi::Frame) {
-        ctx.set_debug_on_hover(true);
+        //ctx.set_debug_on_hover(true);
         let width_total = ctx.available_rect().width();
         let side_panel_size = (width_total * 0.25).round();
         render_sidebar(ctx, self.state(), side_panel_size);

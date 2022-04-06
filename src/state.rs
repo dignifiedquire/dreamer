@@ -11,7 +11,7 @@ use crate::dc::types::{ChatList, Event, Log, MessageList, SharedState};
 //use crate::scheduler::Scheduler;
 
 pub struct AppState {
-    pub shared_state: Arc<RwLock<State>>,
+    shared_state: Arc<RwLock<State>>,
 
     pub commands: async_std::channel::Sender<Command>,
     pub current_input: String,
