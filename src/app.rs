@@ -2,16 +2,14 @@ use crate::{
     state::AppState,
     widgets::{add_account::AddAccount, mainpanel::render_main_panel, sidebar::render_sidebar},
 };
-use egui::{FontData, FontDefinitions, FontFamily, Visuals};
-use std::fs;
 
-pub enum WidgetOption {
-    AddAccount(AddAccount),
-}
+use egui::{FontData, FontDefinitions, FontFamily, Visuals};
+
+use std::fs;
 
 pub struct App {
     state: AppState,
-    right_side: Option<WidgetOption>,
+    add_account_panel: AddAccount,
 }
 
 pub const FONT_LIGHT: &str = "OpenSans-Light";
@@ -62,7 +60,7 @@ impl App {
         let state = AppState::new(&cc.egui_ctx);
 
         App {
-            right_side: Some(WidgetOption::AddAccount(AddAccount::new())),
+            add_account_panel: AddAccount::new(),
             state,
         }
     }
@@ -70,17 +68,12 @@ impl App {
 
 impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut epi::Frame) {
-        //ctx.set_debug_on_hover(true);
         let width_total = ctx.available_rect().width();
         let side_panel_size = (width_total * 0.25).round();
-        render_sidebar(ctx, self.state(), side_panel_size);
-        if let Some(widget) = &mut self.right_side {
-            match widget {
-                WidgetOption::AddAccount(ac) => {
-                    ac.ui(ctx, &self.state, side_panel_size);
-                }
-            };
+        if self.state.shared_state().shared_state.add_account_panel {
+            self.add_account_panel.ui(ctx, &self.state);
         }
+        render_sidebar(ctx, self.state(), side_panel_size);
         render_main_panel(ctx, self.state_mut());
     }
 }

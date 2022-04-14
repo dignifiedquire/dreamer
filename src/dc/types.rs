@@ -99,6 +99,7 @@ pub struct SharedState {
     pub selected_account: Option<u32>,
     pub selected_chat_id: Option<u32>,
     pub selected_chat: Option<ChatState>,
+    pub add_account_panel: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]

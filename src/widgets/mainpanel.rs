@@ -1,6 +1,6 @@
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, FontSelection, Frame, RichText, Rounding,
-    ScrollArea, TextEdit, TopBottomPanel, Ui, Vec2,
+    style::Margin, CentralPanel, Color32, Context, Frame, RichText, Rounding, ScrollArea, TextEdit,
+    TopBottomPanel, Ui, Vec2,
 };
 use epaint::{FontId, Stroke};
 use log::warn;

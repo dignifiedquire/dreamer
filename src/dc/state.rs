@@ -516,7 +516,7 @@ impl LocalStateInner {
         let account_ids = accounts.get_all().await;
 
         if account_ids.len() == 0 {
-            panic!(
+            warn!(
                 "There are no available acccounts in your accounts.toml file: {}",
                 HOME_DIR.to_str().unwrap()
             )
@@ -615,6 +615,7 @@ impl LocalStateInner {
             selected_account: self.get_selected_account_id().await,
             selected_chat_id: selected_chat_id.map(|s| s.to_u32()),
             selected_chat,
+            add_account_panel: false,
         }
     }
 }

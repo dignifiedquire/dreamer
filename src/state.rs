@@ -15,7 +15,6 @@ pub struct AppState {
 
     pub commands: async_std::channel::Sender<Command>,
     pub current_input: String,
-
     pub image_cache: Arc<RwLock<HashMap<String, TextureHandle>>>,
 }
 
@@ -25,7 +24,8 @@ pub enum Command {
     SelectAccount(u32),
     SendTextMessage(String),
     Login(String, String),
-    CloseSidePanel,
+    OpenLoginOrImport,
+    CloseLoginOrImport,
 }
 
 #[derive(Debug, Default)]
@@ -46,6 +46,7 @@ impl AppState {
 
         let ss = shared_state.clone();
         let ctx = ctx.clone();
+
         async_std::task::spawn(async move {
             let shared_state = ss;
             let dc_state = match dc::state::LocalState::new().await {
@@ -67,13 +68,12 @@ impl AppState {
                     s.shared_state.selected_account = Some(info.account);
                     s.shared_state.selected_chat_id = info.chat_id;
                     s.shared_state.selected_chat = info.chat;
-                }
 
-                s.chat_list = dc_state.load_chat_list(None).await.unwrap();
-                if let Some(_chat_id) = s.shared_state.selected_chat_id {
-                    s.message_list = dc_state.load_message_list(None).await.unwrap();
+                    s.chat_list = dc_state.load_chat_list(None).await.unwrap();
+                    if let Some(_chat_id) = s.shared_state.selected_chat_id {
+                        s.message_list = dc_state.load_message_list(None).await.unwrap();
+                    }
                 }
-
                 dbg!(s);
             }
 
@@ -151,8 +151,13 @@ impl AppState {
                                 dc_state.login(id, &dc_ctx, &email, &password).await.unwrap();
                                 ctx.request_repaint();
                             }
-                            Command::CloseSidePanel => {
-
+                            Command::OpenLoginOrImport => {
+                                let mut s = shared_state.write().await;
+                                s.shared_state.add_account_panel = true;
+                            }
+                            Command::CloseLoginOrImport => {
+                                let mut s = shared_state.write().await;
+                                s.shared_state.add_account_panel = false;
                             }
                         }
                     }
@@ -174,6 +179,8 @@ impl AppState {
         async_std::task::block_on(async move { self.shared_state.read().await })
     }
 
+    /// Send a command to the command-channel which is used for communication
+    /// inside the app
     pub fn send_command(&self, cmd: Command) {
         async_std::task::block_on(async move { self.commands.send(cmd).await })
             .expect("failed to send cmd");
