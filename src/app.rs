@@ -1,14 +1,15 @@
-use std::fs;
+use crate::{
+    state::AppState,
+    widgets::{add_account::AddAccount, mainpanel::render_main_panel, sidebar::render_sidebar},
+};
 
 use egui::{FontData, FontDefinitions, FontFamily, Visuals};
 
-use crate::{
-    state::AppState,
-    widgets::{mainpanel::render_main_panel, sidebar::render_sidebar},
-};
+use std::fs;
 
 pub struct App {
     state: AppState,
+    add_account_panel: AddAccount,
 }
 
 pub const FONT_LIGHT: &str = "OpenSans-Light";
@@ -55,8 +56,8 @@ impl App {
             .push(FONT_REGULAR.to_string());
 
         cc.egui_ctx.set_fonts(fonts);
-
         App {
+            add_account_panel: AddAccount::new(),
             state: AppState::new(&cc.egui_ctx),
         }
     }
@@ -64,7 +65,12 @@ impl App {
 
 impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut epi::Frame) {
-        render_sidebar(ctx, self.state());
+        let width_total = ctx.available_rect().width();
+        let side_panel_size = (width_total * 0.25).round();
+        if self.state.shared_state().shared_state.add_account_panel {
+            self.add_account_panel.ui(ctx, &self.state);
+        }
+        render_sidebar(ctx, self.state(), side_panel_size);
         render_main_panel(ctx, self.state_mut());
     }
 }

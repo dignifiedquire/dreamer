@@ -1,16 +1,14 @@
 use egui::{Context, Frame, SidePanel};
-use epaint::Color32;
 
 use super::{accounts, chat_list};
-use crate::state::AppState;
+use crate::{state::AppState, DOUBLE_LIGHT_GRAY};
 
-pub fn render_sidebar(ctx: &Context, state: &AppState) {
+pub fn render_sidebar(ctx: &Context, state: &AppState, max_width: f32) {
     SidePanel::left("sidebar")
-        .frame(Frame::default().fill(Color32::from_gray(250)))
-        .default_width(330.)
-        .min_width(330.)
-        .max_width(330.)
-        .resizable(false)
+        .frame(Frame::default().fill(*DOUBLE_LIGHT_GRAY))
+        .default_width(max_width)
+        .max_width(max_width)
+        .resizable(true)
         .show(ctx, |ui| {
             accounts::render(ui, state);
             chat_list::render(ui, state);

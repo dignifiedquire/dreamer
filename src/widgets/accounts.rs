@@ -20,8 +20,7 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                 for (id, account) in accounts.iter() {
                     let name = account
                         .display_name
-                        .as_ref()
-                        .unwrap_or_else(|| &account.email);
+                        .as_ref().unwrap_or(&account.email);
 
                     let is_active = Some(id) == shared_state.shared_state.selected_account.as_ref();
 
@@ -46,6 +45,27 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                         }
                     });
                 }
+
+                ui.add_space(10.);
+
+                ui.vertical_centered(|ui| {
+                    ui.set_height(40.);
+                    let response = ui.add(
+                        Avatar::new(
+                            "+".to_owned(),
+                            Vec2::splat(40.),
+                            Color32::from_rgb(33, 32, 92),
+                        )
+                        .stroke(Stroke::new(1., Color32::WHITE))
+                        .rounding(Rounding::same(5.)),
+                    );
+                    if response.clicked() {
+                        state.send_command(Command::OpenLoginOrImport);
+                    }
+                    if response.hovered() {
+                        ui.output().cursor_icon = CursorIcon::PointingHand;
+                    }
+                });
             });
         });
 }
