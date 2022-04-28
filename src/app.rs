@@ -56,12 +56,9 @@ impl App {
             .push(FONT_REGULAR.to_string());
 
         cc.egui_ctx.set_fonts(fonts);
-
-        let state = AppState::new(&cc.egui_ctx);
-
         App {
             add_account_panel: AddAccount::new(),
-            state,
+            state: AppState::new(&cc.egui_ctx),
         }
     }
 }

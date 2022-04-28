@@ -202,7 +202,7 @@ impl LocalState {
 
         ls.account_states.insert(id, account);
 
-        Ok((id, ctx.clone()))
+        Ok((id, ctx))
     }
 
     pub async fn login(&self, id: u32, ctx: &Context, email: &str, password: &str) -> Result<()> {
@@ -213,7 +213,7 @@ impl LocalState {
             .account_states
             .get(&id)
             .unwrap()
-            .login(&ctx, &email, &password)
+            .login(ctx, email, password)
             .await;
         if let Err(err) = res {
             let mut ls = self.inner.write().await;
@@ -225,7 +225,7 @@ impl LocalState {
         Ok(())
     }
 
-    pub async fn send_account_details(
+    pub async fn _send_account_details(
         &self,
         id: u32,
     ) -> Result<(SharedState, Option<ChatList>, Option<MessageList>)> {
@@ -262,21 +262,23 @@ impl LocalState {
         Ok((resp, resp2, resp3))
     }
 
-    pub async fn import(&self, ctx: &Context, id: u32, path: &Path) -> Result<()> {
+    pub async fn import(&self, path: &Path) -> Result<()> {
+        let (account_id, ctx) = self.add_account().await.unwrap();
+
         let res = self
             .inner
             .read()
             .await
             .account_states
-            .get(&id)
+            .get(&account_id)
             .unwrap()
             .import(&ctx, path)
             .await;
         if let Err(err) = res {
             let mut ls = self.inner.write().await;
             ls.errors.push(err);
-            ls.account_states.remove(&id);
-            ls.accounts.remove_account(id).await?;
+            ls.account_states.remove(&account_id);
+            ls.accounts.remove_account(account_id).await?;
         }
 
         Ok(())
@@ -306,7 +308,7 @@ impl LocalState {
         }
     }
 
-    pub async fn pin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+    pub async fn _pin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
             let ctx = ls.accounts.get_account(account_id).await.unwrap();
@@ -326,7 +328,7 @@ impl LocalState {
         }
     }
 
-    pub async fn unpin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+    pub async fn _unpin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
             let ctx = ls.accounts.get_account(account_id).await.unwrap();
@@ -346,7 +348,7 @@ impl LocalState {
         }
     }
 
-    pub async fn archive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+    pub async fn _archive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
             let ctx = ls.accounts.get_account(account_id).await.unwrap();
@@ -366,7 +368,7 @@ impl LocalState {
         }
     }
 
-    pub async fn unarchive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
+    pub async fn _unarchive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
             let ctx = ls.accounts.get_account(account_id).await.unwrap();
@@ -386,7 +388,7 @@ impl LocalState {
         }
     }
 
-    pub async fn accept_contact_request(&self, account_id: u32, chat_id: u32) -> Result<()> {
+    pub async fn _accept_contact_request(&self, account_id: u32, chat_id: u32) -> Result<()> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
             let ctx = ls.accounts.get_account(account_id).await.unwrap();
@@ -399,7 +401,7 @@ impl LocalState {
         }
     }
 
-    pub async fn block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {
+    pub async fn _block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
             let ctx = ls.accounts.get_account(account_id).await.unwrap();
@@ -475,7 +477,7 @@ impl LocalState {
         }
     }
 
-    pub async fn send_file_message(
+    pub async fn _send_file_message(
         &self,
         typ: Viewtype,
         path: String,
@@ -499,7 +501,7 @@ impl LocalState {
         }
     }
 
-    pub async fn maybe_network(&self) -> Result<()> {
+    pub async fn _maybe_network(&self) -> Result<()> {
         let ls = self.inner.read().await;
         ls.accounts.maybe_network().await;
         Ok(())
@@ -515,7 +517,7 @@ impl LocalStateInner {
         let accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone()).await?;
         let account_ids = accounts.get_all().await;
 
-        if account_ids.len() == 0 {
+        if account_ids.is_empty() {
             warn!(
                 "There are no available acccounts in your accounts.toml file: {}",
                 HOME_DIR.to_str().unwrap()
@@ -543,11 +545,7 @@ impl LocalStateInner {
     pub async fn get_selected_account(&self) -> Option<(&Account, deltachat::context::Context)> {
         if let Some(ctx) = self.accounts.get_selected_account().await {
             let id = ctx.get_id();
-            if let Some(account) = self.account_states.get(&id) {
-                Some((account, ctx))
-            } else {
-                None
-            }
+            self.account_states.get(&id).map(|account| (account, ctx))
         } else {
             None
         }
@@ -559,11 +557,7 @@ impl LocalStateInner {
     }
 
     pub async fn get_selected_account_id(&self) -> Option<u32> {
-        if let Some(ctx) = self.accounts.get_selected_account().await {
-            Some(ctx.get_id())
-        } else {
-            None
-        }
+        self.accounts.get_selected_account().await.map(|ctx| ctx.get_id())
     }
 
     pub async fn get_selected_account_state(&self) -> Option<&Account> {
@@ -604,7 +598,7 @@ impl LocalStateInner {
         let (selected_chat_id, selected_chat) =
             if let Some(account) = self.get_selected_account_state().await {
                 let state = account.state.read().await;
-                (state.selected_chat_id.clone(), state.selected_chat.clone())
+                (state.selected_chat_id, state.selected_chat.clone())
             } else {
                 (None, None)
             };

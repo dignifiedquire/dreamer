@@ -1,10 +1,11 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
+use async_std::path::PathBuf;
 use async_std::sync::RwLock;
 use egui::{ColorImage, Context, TextureHandle};
 use futures::{select, stream::StreamExt};
 use log::{debug, error, info, warn};
+use nfd::Response;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::dc;
 use crate::dc::types::{ChatList, Event, Log, MessageList, SharedState};
@@ -26,6 +27,8 @@ pub enum Command {
     Login(String, String),
     OpenLoginOrImport,
     CloseLoginOrImport,
+    OpenDialoge,
+    LoadBackupFrom(String),
 }
 
 #[derive(Debug, Default)]
@@ -47,6 +50,7 @@ impl AppState {
         let ss = shared_state.clone();
         let ctx = ctx.clone();
 
+        let commands_sender_clone = commands_sender.clone();
         async_std::task::spawn(async move {
             let shared_state = ss;
             let dc_state = match dc::state::LocalState::new().await {
@@ -61,7 +65,7 @@ impl AppState {
                 let shared_state = dc_state.get_state().await;
                 s.shared_state = shared_state;
 
-                if let Some((id, _)) = s.shared_state.accounts.iter().nth(0) {
+                if let Some((id, _)) = s.shared_state.accounts.iter().next() {
                     dbg!("loading account");
                     let info = dc_state.select_account(*id).await.unwrap();
                     dbg!(&info);
@@ -158,6 +162,28 @@ impl AppState {
                             Command::CloseLoginOrImport => {
                                 let mut s = shared_state.write().await;
                                 s.shared_state.add_account_panel = false;
+                            }
+                            Command::OpenDialoge => {
+                                {
+                                    {
+                                        let sender_clone = commands_sender_clone.clone();
+                                        async_std::task::spawn(async move {
+                                            let result = nfd::open_file_dialog(None, None).unwrap();
+
+                                            match result {
+                                                Response::Okay(file_path) => {
+                                                    sender_clone.send(Command::LoadBackupFrom(file_path)).await.unwrap();
+                                                },
+                                                Response::OkayMultiple(_) => panic!("multiple files not allowed"),
+                                                Response::Cancel => info!("User canceled file-selection for backup loading"),
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                            Command::LoadBackupFrom(path) => {
+                                info!("trying to load backup from file: {}", path);
+                                dc_state.import(&PathBuf::from(path)).await.unwrap();
                             }
                         }
                     }

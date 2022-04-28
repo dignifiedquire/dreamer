@@ -64,11 +64,15 @@ impl AddAccount {
                                         ui.label("Password");
                                         ui.text_edit_singleline(&mut self.password);
                                         ui.add_space(5.);
+
                                         if ui.button("Login").clicked() {
                                             state.send_command(Command::Login(
                                                 self.email.clone(),
                                                 self.password.clone(),
                                             ));
+                                        }
+                                        if ui.button("Import").clicked() {
+                                            state.send_command(Command::OpenDialoge);
                                         }
                                     });
                                 });

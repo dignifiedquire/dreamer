@@ -20,8 +20,7 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                 for (id, account) in accounts.iter() {
                     let name = account
                         .display_name
-                        .as_ref()
-                        .unwrap_or_else(|| &account.email);
+                        .as_ref().unwrap_or(&account.email);
 
                     let is_active = Some(id) == shared_state.shared_state.selected_account.as_ref();
 

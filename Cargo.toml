@@ -25,6 +25,7 @@ glob = "0.3.0"
 deltachat = { git = "http://github.com/deltachat/deltachat-core-rust" }
 image = "0.24.1"
 epaint = "0.17.0"
+nfd = "0.0.4"
 
 
 [features]
