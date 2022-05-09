@@ -1,6 +1,6 @@
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, FontSelection, Frame, RichText, Rounding,
-    ScrollArea, TextEdit, TopBottomPanel, Ui, Vec2,
+    style::Margin, CentralPanel, Color32, Context, Frame, RichText, Rounding, ScrollArea, TextEdit,
+    TopBottomPanel, Ui, Vec2,
 };
 use epaint::{FontId, Stroke};
 use log::warn;
@@ -122,7 +122,11 @@ fn view_message(ui: &mut Ui, state: &AppState, shared_state: &SharedState, msg: 
                     .fill(Color32::from_gray(250))
                     .rounding(4.)
                     .show(ui, |ui| {
-                        ui.label(time.format("%Y-%m-%d").to_string());
+                        ui.label(
+                            time.with_timezone(&chrono::Local)
+                                .format("%d-%m-%Y")
+                                .to_string(),
+                        );
                     });
             });
         }
@@ -180,13 +184,25 @@ fn view_avatar_message(
         );
 
         ui.vertical(|ui| {
-            ui.label(
-                RichText::new(&msg.from_first_name)
-                    .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
-                    .size(18.)
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new(&msg.from_first_name)
+                        .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
+                        .size(18.)
+                        .color(text_color),
+                );
+                ui.label(
+                    RichText::new(
+                        msg.timestamp
+                            .with_timezone(&chrono::Local)
+                            .format("%H:%M")
+                            .to_string(),
+                    )
+                    .family(egui::FontFamily::Name(FONT_LIGHT.into()))
+                    .size(14.)
                     .color(text_color),
-            );
-
+                );
+            });
             view_inner_message(ui, state, shared_state, msg);
         });
     });
