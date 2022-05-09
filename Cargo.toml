@@ -2,12 +2,12 @@
 name = "dreamer"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.60"
 
 [dependencies]
-eframe = { version = "0.17" }
-egui = { version = "0.17", features = ["persistence", "serialize"] }
-epi = { version = "0.17", features = ["persistence"] }
-egui_extras = { version = "0.17" }
+eframe = { version = "0.18" }
+egui = { version = "0.18", features = ["persistence", "serde"] }
+egui_extras = { version = "0.18" }
 tracing-subscriber = "0.3"
 serde = { version = "1", features = ["derive"] }
 async-std = { version = "1.10.0", features = ["unstable"] }
@@ -24,7 +24,7 @@ lazy_static = "1.4.0"
 glob = "0.3.0"
 deltachat = { git = "http://github.com/deltachat/deltachat-core-rust" }
 image = "0.24.1"
-epaint = "0.17.0"
+epaint = "0.18.0"
 
 
 [features]
@@ -35,6 +35,5 @@ extra_asserts = ["egui/extra_asserts"]
 [patch.crates-io]
 eframe = { git = "https://github.com/emilk/egui", branch = "master" }
 egui = { git = "https://github.com/emilk/egui", branch = "master" }
-epi = { git = "https://github.com/emilk/egui", branch = "master" }
 egui_extras = { git = "https://github.com/emilk/egui", branch = "master" }
 epaint       = { git = "https://github.com/emilk/egui", branch = "master" }
