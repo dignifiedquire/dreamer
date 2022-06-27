@@ -1,15 +1,17 @@
 use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use async_std::sync::{Arc, RwLock};
-use async_std::task;
-use async_std::{path::Path, prelude::*};
 use broadcaster::BroadcastChannel;
 use deltachat::chat::{Chat, ChatId};
 use deltachat::context::Context;
 use deltachat::{message, EventType};
+use futures::StreamExt;
 use log::{debug, error, info, warn};
 use num_traits::FromPrimitive;
+use tokio::runtime::Runtime;
+use tokio::sync::RwLock;
 
 use super::{account, types::*};
 
@@ -17,6 +19,7 @@ use super::account::*;
 
 #[derive(Debug, Clone)]
 pub struct LocalState {
+    rt: Arc<Runtime>,
     inner: Arc<RwLock<LocalStateInner>>,
     events: BroadcastChannel<deltachat::Event>,
 }
@@ -29,15 +32,15 @@ struct LocalStateInner {
 }
 
 impl LocalState {
-    pub async fn new() -> Result<Self> {
+    pub async fn new(rt: Arc<Runtime>) -> Result<Self> {
         let inner = LocalStateInner::new().await?;
 
         let receiver = BroadcastChannel::new();
         let sender = receiver.clone();
-        let mut events = inner.accounts.get_event_emitter().await;
+        let events = inner.accounts.get_event_emitter().await;
 
-        task::spawn(async move {
-            while let Ok(Some(event)) = events.recv().await {
+        rt.spawn(async move {
+            while let Some(event) = events.recv().await {
                 if let Err(err) = sender.send(&event).await {
                     error!("Failed to send event: {:?}", err);
                 }
@@ -45,6 +48,7 @@ impl LocalState {
         });
 
         Ok(Self {
+            rt,
             inner: Arc::new(RwLock::new(inner)),
             events: receiver,
         })
@@ -61,11 +65,11 @@ impl LocalState {
         f(state);
     }
 
-    pub fn subscribe_all(&self, rx: async_std::channel::Sender<(u32, Event)>) {
+    pub fn subscribe_all(&self, rx: tokio::sync::mpsc::Sender<(u32, Event)>) {
         let mut events = self.events.clone();
         let ls = self.clone();
 
-        task::spawn(async move {
+        self.rt.spawn(async move {
             while let Some(event) = events.next().await {
                 match ls.handle_event(&rx, event).await {
                     Ok(_) => {}
@@ -79,7 +83,7 @@ impl LocalState {
 
     async fn handle_event(
         &self,
-        rx: &async_std::channel::Sender<(u32, Event)>,
+        rx: &tokio::sync::mpsc::Sender<(u32, Event)>,
         event: deltachat::Event,
     ) -> Result<()> {
         match event.typ {

@@ -1,19 +1,20 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use async_std::sync::RwLock;
 use egui::{ColorImage, Context, TextureHandle};
-use futures::{select, stream::StreamExt};
 use log::{debug, error, info, warn};
+use tokio::runtime::Runtime;
+use tokio::{select, sync::RwLock};
 
 use crate::dc;
 use crate::dc::types::{ChatList, Event, Log, MessageList, SharedState};
 //use crate::scheduler::Scheduler;
 
 pub struct AppState {
+    rt: Arc<Runtime>,
     shared_state: Arc<RwLock<State>>,
 
-    pub commands: async_std::channel::Sender<Command>,
+    pub commands: tokio::sync::mpsc::Sender<Command>,
     pub current_input: String,
 
     pub image_cache: Arc<RwLock<HashMap<String, TextureHandle>>>,
@@ -37,16 +38,18 @@ impl AppState {
     pub fn new(ctx: &Context) -> Self {
         debug!("Setting up app state");
 
-        let (dc_events_sender, mut dc_events_receiver) = async_std::channel::bounded(1000);
-        let (commands_sender, mut commands_receiver) = async_std::channel::bounded(1000);
+        let (dc_events_sender, mut dc_events_receiver) = tokio::sync::mpsc::channel(1000);
+        let (commands_sender, mut commands_receiver) = tokio::sync::mpsc::channel(1000);
 
         let shared_state = Arc::new(RwLock::new(State::default()));
+        let rt = Arc::new(Runtime::new().unwrap());
 
         let ss = shared_state.clone();
         let ctx = ctx.clone();
-        async_std::task::spawn(async move {
+        let rt_local = rt.clone();
+        rt.spawn(async move {
             let shared_state = ss;
-            let dc_state = match dc::state::LocalState::new().await {
+            let dc_state = match dc::state::LocalState::new(rt_local).await {
                 Ok(local_state) => local_state,
                 Err(err) => panic!("Can't restore local state: {}", err),
             };
@@ -79,7 +82,7 @@ impl AppState {
 
             loop {
                 select! {
-                    (account, event) = dc_events_receiver.select_next_some() => {
+                    Some((account, event)) = dc_events_receiver.recv() => {
                         match event {
                             Event::Configure(_progress) => {}
                             Event::Log(log) => match log {
@@ -113,7 +116,7 @@ impl AppState {
                         // TODO: be more selective on when to repaint
                         ctx.request_repaint();
                     }
-                    cmd = commands_receiver.select_next_some() => {
+                    Some(cmd) = commands_receiver.recv() => {
                         match cmd {
                             Command::SelectChat(account, chat) => {
                                 let mut s = shared_state.write().await;
@@ -149,6 +152,7 @@ impl AppState {
         });
 
         AppState {
+            rt,
             shared_state,
             current_input: Default::default(),
             commands: commands_sender,
@@ -158,12 +162,13 @@ impl AppState {
 
     pub fn init(&mut self) {}
 
-    pub fn shared_state(&self) -> async_std::sync::RwLockReadGuard<'_, State> {
-        async_std::task::block_on(async move { self.shared_state.read().await })
+    pub fn shared_state(&self) -> tokio::sync::RwLockReadGuard<'_, State> {
+        self.shared_state.blocking_read()
     }
 
     pub fn send_command(&self, cmd: Command) {
-        async_std::task::block_on(async move { self.commands.send(cmd).await })
+        self.commands
+            .blocking_send(cmd)
             .expect("failed to send cmd");
     }
 
@@ -178,22 +183,22 @@ impl AppState {
     {
         let image_cache = self.image_cache.clone();
         let name2 = name.clone();
-        let val =
-            async_std::task::block_on(async move { image_cache.read().await.get(&name2).cloned() });
+        let val = image_cache.blocking_read().get(&name2).cloned();
 
         if val.is_none() {
             // Lazy load
             let ctx = ctx.clone();
             let image_cache = self.image_cache.clone();
-            async_std::task::spawn(async move {
+            self.rt.spawn(async move {
                 match load(&name) {
                     Ok(image_data) => {
                         let name2 = name.clone();
                         let ctx2 = ctx.clone();
-                        let texture = async_std::task::spawn_blocking(move || {
-                            ctx2.load_texture(&name2, image_data)
+                        let texture = tokio::task::spawn_blocking(move || {
+                            ctx2.load_texture(&name2, image_data, egui::TextureFilter::Linear)
                         })
-                        .await;
+                        .await
+                        .unwrap();
                         image_cache.write().await.insert(name, texture);
                         ctx.request_repaint();
                     }

@@ -1,10 +1,9 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use super::types::{ChatItem, ChatMessage, ChatState, InnerChatMessage, Login, Viewtype};
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
-use async_std::path::{Path, PathBuf};
-use async_std::prelude::*;
-use async_std::sync::{Arc, RwLock};
 use chrono::prelude::*;
 use deltachat::chat::ChatVisibility;
 use deltachat::{
@@ -15,10 +14,12 @@ use deltachat::{
     message::{self, MsgId},
     EventType,
 };
+use futures::StreamExt;
 use lazy_static::lazy_static;
 use log::*;
 use num_traits::{FromPrimitive, ToPrimitive};
 use serde::Serialize;
+use tokio::sync::RwLock;
 
 #[cfg(not(target_os = "linux"))]
 lazy_static! {
@@ -383,22 +384,17 @@ async fn refresh_message_list(
     chat_id: ChatId,
     range: Option<(usize, usize)>,
 ) -> Result<(u32, (usize, usize), Vec<ChatItem>, Vec<ChatMessage>)> {
-    let chat_items: Vec<_> = chat::get_chat_msgs(
-        &context,
-        chat_id,
-        deltachat::constants::DC_GCM_ADDDAYMARKER,
-        None,
-    )
-    .await?
-    .into_iter()
-    .filter_map(|item| match item {
-        chat::ChatItem::Message { msg_id } => Some(ChatItem::Message(msg_id.to_u32())),
-        chat::ChatItem::DayMarker { timestamp } => {
-            Some(ChatItem::DayMarker(get_timestamp(timestamp * 86_400)))
-        }
-        _ => None,
-    })
-    .collect();
+    let chat_items: Vec<_> =
+        chat::get_chat_msgs(&context, chat_id, deltachat::constants::DC_GCM_ADDDAYMARKER)
+            .await?
+            .into_iter()
+            .filter_map(|item| match item {
+                chat::ChatItem::Message { msg_id } => Some(ChatItem::Message(msg_id.to_u32())),
+                chat::ChatItem::DayMarker { timestamp } => {
+                    Some(ChatItem::DayMarker(get_timestamp(timestamp * 86_400)))
+                }
+            })
+            .collect();
 
     let total_len = chat_items.len();
 
