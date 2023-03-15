@@ -79,7 +79,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                         });
                         Frame::none().inner_margin(Margin::same(5.)).show(ui, |ui| {
                             ScrollArea::vertical()
-                                .stick_to_bottom()
+                                .stick_to_bottom(true)
                                 .auto_shrink([false; 2])
                                 .show(ui, |ui| {
                                     ui.vertical(|ui| {
@@ -194,9 +194,8 @@ fn view_avatar_message(
                 ui.label(
                     RichText::new(
                         msg.timestamp
-                            .with_timezone(&chrono::Local)
-                            .format("%H:%M")
-                            .to_string(),
+                            .map(|t| t.with_timezone(&chrono::Local).format("%H:%M").to_string())
+                            .unwrap_or_default(),
                     )
                     .family(egui::FontFamily::Name(FONT_LIGHT.into()))
                     .size(14.)

@@ -37,7 +37,7 @@ impl LocalState {
 
         let receiver = BroadcastChannel::new();
         let sender = receiver.clone();
-        let events = inner.accounts.get_event_emitter().await;
+        let events = inner.accounts.get_event_emitter();
 
         rt.spawn(async move {
             while let Some(event) = events.recv().await {
@@ -140,7 +140,7 @@ impl LocalState {
                 let res: Result<()> = async {
                     let ctx = {
                         let ls = self.inner.read().await;
-                        ls.accounts.get_account(event.id).await.unwrap()
+                        ls.accounts.get_account(event.id).unwrap()
                     };
 
                     let msg = message::Message::load_from_db(&ctx, msg_id)
@@ -201,7 +201,7 @@ impl LocalState {
     pub async fn add_account(&self) -> Result<(u32, Context)> {
         let mut ls = self.inner.write().await;
         let id = ls.accounts.add_account().await?;
-        let ctx = ls.accounts.get_account(id).await.unwrap();
+        let ctx = ls.accounts.get_account(id).unwrap();
         let account = Account::new()?;
 
         ls.account_states.insert(id, account);
@@ -234,7 +234,7 @@ impl LocalState {
         id: u32,
     ) -> Result<(SharedState, Option<ChatList>, Option<MessageList>)> {
         let ls = self.inner.write().await;
-        let ctx = ls.accounts.get_account(id).await.unwrap();
+        let ctx = ls.accounts.get_account(id).unwrap();
 
         let resp = ls.to_response().await;
 
@@ -293,7 +293,7 @@ impl LocalState {
     pub async fn select_chat(&self, account_id: u32, chat_id: u32) -> Result<MessageList> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.select_chat(&ctx, chat).await?;
 
@@ -313,7 +313,7 @@ impl LocalState {
     pub async fn pin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.pin_chat(&ctx, chat).await?;
 
@@ -333,7 +333,7 @@ impl LocalState {
     pub async fn unpin_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.unpin_chat(&ctx, chat).await?;
 
@@ -353,7 +353,7 @@ impl LocalState {
     pub async fn archive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.archive_chat(&ctx, chat).await?;
 
@@ -373,7 +373,7 @@ impl LocalState {
     pub async fn unarchive_chat(&self, account_id: u32, chat_id: u32) -> Result<Response> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.unpin_chat(&ctx, chat).await?;
 
@@ -393,7 +393,7 @@ impl LocalState {
     pub async fn accept_contact_request(&self, account_id: u32, chat_id: u32) -> Result<()> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.accept_contact_request(&ctx, chat).await?;
 
@@ -406,7 +406,7 @@ impl LocalState {
     pub async fn block_contact(&self, account_id: u32, chat_id: u32) -> Result<()> {
         let ls = self.inner.write().await;
         if let Some(account) = ls.account_states.get(&account_id) {
-            let ctx = ls.accounts.get_account(account_id).await.unwrap();
+            let ctx = ls.accounts.get_account(account_id).unwrap();
             let chat = ChatId::new(chat_id);
             account.block_contact(&ctx, chat).await?;
 
@@ -517,7 +517,7 @@ impl LocalStateInner {
         // load accounts from default dir
         let mut account_states = HashMap::new();
         let accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone()).await?;
-        let account_ids = accounts.get_all().await;
+        let account_ids = accounts.get_all();
 
         if account_ids.len() == 0 {
             panic!(
@@ -545,7 +545,7 @@ impl LocalStateInner {
     }
 
     pub async fn get_selected_account(&self) -> Option<(&Account, deltachat::context::Context)> {
-        if let Some(ctx) = self.accounts.get_selected_account().await {
+        if let Some(ctx) = self.accounts.get_selected_account() {
             let id = ctx.get_id();
             if let Some(account) = self.account_states.get(&id) {
                 Some((account, ctx))
@@ -563,7 +563,7 @@ impl LocalStateInner {
     }
 
     pub async fn get_selected_account_id(&self) -> Option<u32> {
-        if let Some(ctx) = self.accounts.get_selected_account().await {
+        if let Some(ctx) = self.accounts.get_selected_account() {
             Some(ctx.get_id())
         } else {
             None
@@ -582,8 +582,7 @@ impl LocalStateInner {
         let mut accounts = HashMap::with_capacity(self.account_states.len());
         for (id, account) in self.account_states.iter() {
             let account = &account.state.read().await;
-            let ctx = self.accounts.get_account(*id).await.unwrap();
-
+            let ctx = self.accounts.get_account(*id).unwrap();
             use deltachat::config::Config;
             let email = ctx.get_config(Config::Addr).await.unwrap().unwrap();
             let profile_image = ctx

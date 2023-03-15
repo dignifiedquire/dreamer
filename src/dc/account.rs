@@ -5,7 +5,7 @@ use std::sync::Arc;
 use super::types::{ChatItem, ChatMessage, ChatState, InnerChatMessage, Login, Viewtype};
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use chrono::prelude::*;
-use deltachat::chat::ChatVisibility;
+use deltachat::chat::{ChatVisibility, MessageListOptions};
 use deltachat::{
     chat::{self, Chat, ChatId},
     chatlist::Chatlist,
@@ -320,9 +320,9 @@ pub struct RemoteEvent {
     event: String,
 }
 
-fn get_timestamp(ts: i64) -> DateTime<Utc> {
-    let naive = NaiveDateTime::from_timestamp(ts, 0);
-    DateTime::from_utc(naive, Utc)
+fn get_timestamp(ts: i64) -> Option<DateTime<Utc>> {
+    let naive = NaiveDateTime::from_timestamp_opt(ts, 0)?;
+    Some(DateTime::from_utc(naive, Utc))
 }
 
 async fn load_chat_state(
@@ -384,17 +384,23 @@ async fn refresh_message_list(
     chat_id: ChatId,
     range: Option<(usize, usize)>,
 ) -> Result<(u32, (usize, usize), Vec<ChatItem>, Vec<ChatMessage>)> {
-    let chat_items: Vec<_> =
-        chat::get_chat_msgs(&context, chat_id, deltachat::constants::DC_GCM_ADDDAYMARKER)
-            .await?
-            .into_iter()
-            .filter_map(|item| match item {
-                chat::ChatItem::Message { msg_id } => Some(ChatItem::Message(msg_id.to_u32())),
-                chat::ChatItem::DayMarker { timestamp } => {
-                    Some(ChatItem::DayMarker(get_timestamp(timestamp * 86_400)))
-                }
-            })
-            .collect();
+    let chat_items: Vec<_> = chat::get_chat_msgs_ex(
+        &context,
+        chat_id,
+        MessageListOptions {
+            info_only: false,
+            add_daymarker: true,
+        },
+    )
+    .await?
+    .into_iter()
+    .filter_map(|item| match item {
+        chat::ChatItem::Message { msg_id } => Some(ChatItem::Message(msg_id.to_u32())),
+        chat::ChatItem::DayMarker { timestamp } => {
+            get_timestamp(timestamp * 86_400).map(ChatItem::DayMarker)
+        }
+    })
+    .collect();
 
     let total_len = chat_items.len();
 
