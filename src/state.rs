@@ -74,8 +74,6 @@ impl AppState {
                 if let Some(_chat_id) = s.shared_state.selected_chat_id {
                     s.message_list = dc_state.load_message_list(None).await.unwrap();
                 }
-
-                dbg!(s);
             }
 
             ctx.request_repaint();
@@ -195,7 +193,7 @@ impl AppState {
                         let name2 = name.clone();
                         let ctx2 = ctx.clone();
                         let texture = tokio::task::spawn_blocking(move || {
-                            ctx2.load_texture(&name2, image_data, egui::TextureFilter::Linear)
+                            ctx2.load_texture(&name2, image_data, Default::default())
                         })
                         .await
                         .unwrap();

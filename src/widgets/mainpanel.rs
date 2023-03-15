@@ -32,7 +32,9 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                         |ui| {
                             let response =
                                 ui.add(egui::TextEdit::singleline(&mut state.current_input));
-                            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
+                            if response.lost_focus()
+                                && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                            {
                                 let message = std::mem::take(&mut state.current_input);
                                 if message.len() > 0 {
                                     state.send_command(Command::SendTextMessage(message));
@@ -41,7 +43,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                 let text_edit_id = response.id;
 
                                 // reselect focus
-                                ui.ctx().memory().request_focus(text_edit_id);
+                                ui.ctx().memory_mut(|m| m.request_focus(text_edit_id));
                             }
                         },
                     )
@@ -141,7 +143,7 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) {
         if let Some(ref text) = msg.text {
             ui.label(
                 RichText::new(text)
-                    .size(16.)
+                    .size(14.)
                     .color(text_color)
                     .family(egui::FontFamily::Name(FONT_REGULAR.into())),
             );
@@ -188,7 +190,7 @@ fn view_avatar_message(
                 ui.label(
                     RichText::new(&msg.from_first_name)
                         .family(egui::FontFamily::Name(FONT_SEMI_BOLD.into()))
-                        .size(18.)
+                        .size(12.)
                         .color(text_color),
                 );
                 ui.label(
@@ -198,7 +200,7 @@ fn view_avatar_message(
                             .unwrap_or_default(),
                     )
                     .family(egui::FontFamily::Name(FONT_LIGHT.into()))
-                    .size(14.)
+                    .size(12.)
                     .color(text_color),
                 );
             });
@@ -241,7 +243,7 @@ fn view_inner_message(
                     ui.horizontal_wrapped(|ui| {
                         ui.add(selectable_text(
                             &mut text.as_str(),
-                            18.,
+                            14.,
                             FONT_LIGHT,
                             text_color,
                         ));
@@ -297,7 +299,7 @@ fn view_inner_message(
             if let Some(ref text) = msg.text {
                 ui.add(selectable_text(
                     &mut text.as_str(),
-                    18.,
+                    14.,
                     FONT_REGULAR,
                     text_color,
                 ));

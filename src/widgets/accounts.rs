@@ -42,7 +42,7 @@ pub fn render(ui: &mut Ui, state: &AppState) {
                             state.send_command(Command::SelectAccount(*id));
                         }
                         if response.hovered() {
-                            ui.output().cursor_icon = CursorIcon::PointingHand;
+                            ui.output_mut(|o| o.cursor_icon = CursorIcon::PointingHand);
                         }
                     });
                 }
