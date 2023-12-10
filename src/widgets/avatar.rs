@@ -7,26 +7,26 @@ use egui::{TextStyle, WidgetText};
 
 use crate::app::FONT_SEMI_BOLD;
 
-pub struct Avatar {
+pub struct Avatar<'a> {
     name: String,
     size: Vec2,
     margin: Margin,
     fill: Color32,
     rounding: Rounding,
     stroke: Stroke,
-    image: Option<Image>,
+    image: Option<Image<'a>>,
     sense: Sense,
 }
 
-impl Avatar {
+impl<'a> Avatar<'a> {
     pub fn new(name: String, size: Vec2, fill: Color32) -> Self {
         Avatar {
             name,
             size,
             margin: Margin::same(0.),
             fill,
-            rounding: Rounding::none(),
-            stroke: Stroke::none(),
+            rounding: Rounding::ZERO,
+            stroke: Stroke::NONE,
             image: None,
             sense: Sense::hover().union(Sense::click()),
         }
@@ -48,12 +48,12 @@ impl Avatar {
     }
 
     pub fn image(mut self, texture: Option<TextureHandle>) -> Self {
-        self.image = texture.map(|t| Image::new(&t, t.size_vec2()));
+        self.image = texture.map(|t| Image::new(&t).max_size(t.size_vec2()));
         self
     }
 }
 
-impl Widget for Avatar {
+impl<'a> Widget for Avatar<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
         let sense = self.sense;
         let stroke = self.stroke; //Stroke::new(2., Color32::RED); // self.stroke
