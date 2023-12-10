@@ -272,7 +272,7 @@ fn view_inner_message(
                                 // wide enough
                                 [image_size[0] as f32, image_size[1] as f32]
                             };
-                            ui.image(image.id(), size);
+                            ui.add(egui::Image::new(&image).max_size(size.into()));
                         }
                     }
                 }

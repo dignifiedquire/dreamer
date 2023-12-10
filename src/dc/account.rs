@@ -289,7 +289,7 @@ impl Account {
             let mut msg = message::Message::new(
                 deltachat::message::Viewtype::from_i32(typ.to_i32().unwrap()).unwrap(),
             );
-            msg.set_text(text);
+            msg.set_text(text.unwrap_or_else(|| "".to_owned()));
             msg.set_file(path, mime.as_deref());
 
             chat::send_msg(&context, chat_id, &mut msg)
@@ -430,7 +430,7 @@ async fn refresh_message_list(
                 let from = match contacts.get(&msg.get_from_id()) {
                     Some(contact) => contact,
                     None => {
-                        let contact = Contact::load_from_db(&context, msg.get_from_id())
+                        let contact = Contact::get_by_id(&context, msg.get_from_id())
                             .await
                             .map_err(|err| {
                                 anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err)
@@ -442,12 +442,10 @@ async fn refresh_message_list(
 
                 let is_first = if last_marker {
                     true
+                } else if let Some(id) = last_contact_id {
+                    id != msg.get_from_id()
                 } else {
-                    if let Some(id) = last_contact_id {
-                        id != msg.get_from_id()
-                    } else {
-                        true
-                    }
+                    true
                 };
                 last_contact_id = Some(msg.get_from_id());
                 last_marker = false;
@@ -459,7 +457,14 @@ async fn refresh_message_list(
                     from_profile_image: from.get_profile_image(&context).await?.map(Into::into),
                     from_color: from.get_color(),
                     state: msg.get_state().to_string(),
-                    text: msg.get_text(),
+                    text: {
+                        let text = msg.get_text();
+                        if text.is_empty() {
+                            None
+                        } else {
+                            Some(text)
+                        }
+                    },
                     quote: None,
                     timestamp: get_timestamp(msg.get_sort_timestamp()),
                     is_info: msg.is_info(),
@@ -493,7 +498,7 @@ async fn load_quote(
     let from = match contacts.get(&msg.get_from_id()) {
         Some(contact) => contact,
         None => {
-            let contact = Contact::load_from_db(&context, msg.get_from_id())
+            let contact = Contact::get_by_id(&context, msg.get_from_id())
                 .await
                 .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
             contacts.insert(msg.get_from_id(), contact);
@@ -509,7 +514,14 @@ async fn load_quote(
         from_profile_image: from.get_profile_image(&context).await?.map(Into::into),
         from_color: from.get_color(),
         state: msg.get_state().to_string(),
-        text: msg.get_text(),
+        text: {
+            let text = msg.get_text();
+            if text.is_empty() {
+                None
+            } else {
+                Some(text)
+            }
+        },
         quote: None,
         timestamp: get_timestamp(msg.get_sort_timestamp()),
         is_info: msg.is_info(),
