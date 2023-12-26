@@ -113,6 +113,15 @@ pub enum ChatMessage {
     DayMarker(DateTime<Utc>),
 }
 
+impl ChatMessage {
+    pub fn id(&self) -> Option<u32> {
+        match self {
+            ChatMessage::Message(msg) => Some(msg.id),
+            ChatMessage::DayMarker(_) => None,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct InnerChatMessage {
     pub id: u32,

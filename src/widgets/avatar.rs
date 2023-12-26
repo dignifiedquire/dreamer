@@ -1,3 +1,4 @@
+use egui::load::SizedTexture;
 use egui::widgets::Image;
 use egui::{
     style::Margin, Color32, Layout, Response, RichText, Rounding, Sense, Stroke, TextureHandle, Ui,
@@ -14,7 +15,7 @@ pub struct Avatar {
     fill: Color32,
     rounding: Rounding,
     stroke: Stroke,
-    image: Option<Image>,
+    image: Option<Image<'static>>,
     sense: Sense,
 }
 
@@ -25,8 +26,8 @@ impl Avatar {
             size,
             margin: Margin::same(0.),
             fill,
-            rounding: Rounding::none(),
-            stroke: Stroke::none(),
+            rounding: Rounding::ZERO,
+            stroke: Stroke::NONE,
             image: None,
             sense: Sense::hover().union(Sense::click()),
         }
@@ -48,7 +49,8 @@ impl Avatar {
     }
 
     pub fn image(mut self, texture: Option<TextureHandle>) -> Self {
-        self.image = texture.map(|t| Image::new(&t, t.size_vec2()));
+        let sized = texture.map(|t| SizedTexture::new(&t, t.size_vec2()));
+        self.image = sized.map(Image::from_texture);
         self
     }
 }

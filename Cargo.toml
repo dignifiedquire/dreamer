@@ -5,10 +5,10 @@ edition = "2021"
 rust-version = "1.60"
 
 [dependencies]
-eframe = { version = "0.21" }
-egui = { version = "0.21", features = ["persistence", "serde"] }
-egui_extras = { version = "0.21" }
-epaint = "0.21"
+eframe = { version = "0.24" }
+egui = { version = "0.24", features = ["persistence", "serde"] }
+egui_extras = { version = "0.24" }
+epaint = "0.24"
 tracing-subscriber = "0.3"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
@@ -30,9 +30,3 @@ image = "0.24.1"
 default = []
 extra_debug_asserts = ["egui/extra_debug_asserts"]
 extra_asserts = ["egui/extra_asserts"]
-
-[patch.crates-io]
-eframe = { git = "https://github.com/emilk/egui", branch = "master" }
-egui = { git = "https://github.com/emilk/egui", branch = "master" }
-egui_extras = { git = "https://github.com/emilk/egui", branch = "master" }
-epaint = { git = "https://github.com/emilk/egui", branch = "master" }

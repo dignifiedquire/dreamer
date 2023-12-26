@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use egui::{ColorImage, Context, TextureHandle};
@@ -10,14 +10,38 @@ use crate::dc;
 use crate::dc::types::{ChatList, Event, Log, MessageList, SharedState};
 //use crate::scheduler::Scheduler;
 
+#[derive(Clone)]
 pub struct AppState {
     rt: Arc<Runtime>,
     shared_state: Arc<RwLock<State>>,
+
+    pub ui_cache: Arc<RwLock<UiCache>>,
 
     pub commands: tokio::sync::mpsc::Sender<Command>,
     pub current_input: String,
 
     pub image_cache: Arc<RwLock<HashMap<String, TextureHandle>>>,
+}
+
+#[derive(Debug, Default)]
+pub struct UiCache {
+    message_heights: BTreeMap<u32, Vec<(f32, f32)>>,
+}
+
+impl UiCache {
+    pub fn get_message_height(&self, id: u32, width: f32) -> Option<f32> {
+        let sizes = self.message_heights.get(&id)?;
+        sizes.iter().find(|(w, _)| w == &width).map(|(_, h)| *h)
+    }
+
+    pub fn set_message_height(&mut self, id: u32, width: f32, height: f32) {
+        let entries = self.message_heights.entry(id).or_default();
+        if entries.iter().find(|(w, _)| w == &width).is_some() {
+            // already exists
+            return;
+        }
+        entries.push((width, height))
+    }
 }
 
 #[derive(Debug)]
@@ -152,6 +176,7 @@ impl AppState {
         AppState {
             rt,
             shared_state,
+            ui_cache: Default::default(),
             current_input: Default::default(),
             commands: commands_sender,
             image_cache: Default::default(),

@@ -1,9 +1,12 @@
+use std::path::PathBuf;
+
 use egui::{
-    style::Margin, CentralPanel, Color32, Context, Frame, RichText, Rounding, ScrollArea, TextEdit,
-    TopBottomPanel, Ui, Vec2,
+    load::SizedTexture, style::Margin, CentralPanel, Color32, Context, Frame, Response, RichText,
+    Rounding, TextEdit, TopBottomPanel, Ui, Vec2, Widget,
 };
-use epaint::{FontId, Stroke};
-use log::warn;
+use egui_extras::{Column, TableBuilder};
+use epaint::{FontId, Stroke, TextureHandle};
+use log::{info, warn};
 
 use crate::{
     app::{FONT_LIGHT, FONT_REGULAR, FONT_SEMI_BOLD},
@@ -80,25 +83,53 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                             }
                         });
                         Frame::none().inner_margin(Margin::same(5.)).show(ui, |ui| {
-                            ScrollArea::vertical()
+                            TableBuilder::new(ui)
+                                .column(Column::remainder().at_least(100.0))
                                 .stick_to_bottom(true)
-                                .auto_shrink([false; 2])
-                                .show(ui, |ui| {
-                                    ui.vertical(|ui| {
-                                        let shared_state = state.shared_state();
-                                        for msg in &shared_state.message_list.messages {
-                                            egui::Frame::none()
-                                                .inner_margin(Margin::same(0.))
-                                                .show(ui, |ui| {
-                                                    view_message(
-                                                        ui,
-                                                        state,
-                                                        &shared_state.shared_state,
-                                                        msg,
-                                                    )
-                                                });
+                                .auto_shrink(false)
+                                .body(|mut body| {
+                                    info!("rendering body");
+                                    let shared_state = state.shared_state();
+                                    let msgs = &shared_state.message_list.messages;
+
+                                    let mut ui_cache = state.ui_cache.blocking_write();
+                                    let width = body.widths()[0];
+
+                                    let ctx = body.ui_mut().ctx().clone();
+                                    let mut cache_hits = 0;
+                                    let row_heights = msgs.iter().map(|msg| {
+                                        let id = msg.id().unwrap_or(u32::MAX);
+                                        if let Some(height) = ui_cache.get_message_height(id, width)
+                                        {
+                                            cache_hits += 1;
+                                            height
+                                        } else {
+                                            let height = calc_height(
+                                                &state,
+                                                &shared_state.shared_state,
+                                                &ctx,
+                                                width,
+                                                msg,
+                                            );
+                                            ui_cache.set_message_height(id, width, height);
+                                            height
                                         }
                                     });
+
+                                    body.heterogeneous_rows(row_heights, |row_index, mut row| {
+                                        let msg = msgs[row_index].clone();
+                                        row.col(|ui| {
+                                            ui.add(ChatMessageWidget {
+                                                state: state.clone(),
+                                                msg,
+                                            });
+                                        });
+                                    });
+                                    info!(
+                                        "inserted {} rows ({} cache hits)",
+                                        msgs.len(),
+                                        cache_hits
+                                    );
                                 });
                         });
                     });
@@ -106,37 +137,120 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
         });
 }
 
-fn view_message(ui: &mut Ui, state: &AppState, shared_state: &SharedState, msg: &ChatMessage) {
-    ui.scope(|ui| match msg {
+fn calc_height(
+    state: &AppState,
+    shared_state: &SharedState,
+    ctx: &Context,
+    width: f32,
+    msg: &ChatMessage,
+) -> f32 {
+    // TODO: use font sizes
+    match msg {
         ChatMessage::Message(msg) => {
             if msg.is_info {
-                view_info_message(ui, state, msg);
+                // single row
+                18.
             } else if msg.is_first {
-                view_avatar_message(ui, state, shared_state, msg);
+                // avatar
+                20. + calc_line_height(state, shared_state, ctx, width, 45., msg).max(25.)
             } else {
-                view_simple_message(ui, state, shared_state, msg);
+                calc_line_height(state, shared_state, ctx, width, 0., msg)
             }
         }
-        ChatMessage::DayMarker(time) => {
-            // FIXME: make gray backround only as big as needed (not full width)
-            ui.vertical_centered(|ui| {
-                Frame::none()
-                    .fill(Color32::from_gray(250))
-                    .rounding(4.)
-                    .show(ui, |ui| {
-                        ui.label(
-                            time.with_timezone(&chrono::Local)
-                                .format("%d-%m-%Y")
-                                .to_string(),
-                        );
-                    });
-            });
+        ChatMessage::DayMarker(_) => {
+            // single row
+            18.
         }
-    });
+    }
+}
+
+fn calc_line_height(
+    state: &AppState,
+    shared_state: &SharedState,
+    ctx: &Context,
+    width: f32,
+    left_padding: f32,
+    msg: &InnerChatMessage,
+) -> f32 {
+    // TODO: Load image and calculate size
+    let image_size = if msg.viewtype == Viewtype::Image || msg.viewtype == Viewtype::Gif {
+        if let Some(image) = msg
+            .file
+            .clone()
+            .and_then(|path| load_image(state, shared_state, ctx, msg.id, path))
+        {
+            let max_width = width - 10.;
+            let [_, height] = calc_image_size(&image, max_width);
+            height
+        } else {
+            200.
+        }
+    } else {
+        0.
+    };
+
+    let top_margin = 10.;
+    let font_size = 14.;
+
+    let total_text_len = msg.text.as_ref().map(|t| t.len()).unwrap_or(0)
+        + msg
+            .quote
+            .as_ref()
+            .and_then(|q| q.text.as_ref())
+            .map(|t| t.len())
+            .unwrap_or(0);
+
+    let text_height = if total_text_len > 0 {
+        // TODO: less naive
+        let num_chars = total_text_len as f32;
+        let num_chars_per_line = (width - left_padding) / font_size;
+        let num_lines = num_chars / num_chars_per_line;
+        num_lines * (font_size + 2.)
+    } else {
+        0.
+    };
+    top_margin + text_height + image_size
+}
+
+struct ChatMessageWidget {
+    state: AppState,
+    msg: ChatMessage,
+}
+
+impl Widget for ChatMessageWidget {
+    fn ui(self, ui: &mut Ui) -> Response {
+        ui.scope(|ui| match &self.msg {
+            ChatMessage::Message(msg) => {
+                if msg.is_info {
+                    view_info_message(ui, &self.state, msg);
+                } else if msg.is_first {
+                    view_avatar_message(ui, &self.state, msg);
+                } else {
+                    view_simple_message(ui, &self.state, msg);
+                }
+            }
+            ChatMessage::DayMarker(time) => {
+                // FIXME: make gray backround only as big as needed (not full width)
+                ui.vertical_centered(|ui| {
+                    Frame::none()
+                        .fill(Color32::from_gray(250))
+                        .rounding(4.)
+                        .show(ui, |ui| {
+                            ui.label(
+                                time.with_timezone(&chrono::Local)
+                                    .format("%d-%m-%Y")
+                                    .to_string(),
+                            );
+                        });
+                });
+            }
+        })
+        .response
+    }
 }
 
 /// Renders an info message.
-fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) {
+fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) -> Response {
     ui.vertical_centered(|ui| {
         let text_color = Color32::from_rgb(41, 51, 63);
 
@@ -150,23 +264,25 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) {
         } else {
             warn!("missing text on info message");
         }
-    });
+    })
+    .response
 }
 
 /// Renders a message with avatar.
-fn view_avatar_message(
-    ui: &mut Ui,
-    state: &AppState,
-    shared_state: &SharedState,
-    msg: &InnerChatMessage,
-) {
+fn view_avatar_message(ui: &mut Ui, state: &AppState, msg: &InnerChatMessage) -> Response {
     ui.add_space(10.);
 
     ui.horizontal(|ui| {
         let text_color = Color32::from_rgb(41, 51, 63);
-
-        let account_id = shared_state.selected_account.unwrap_or_default();
-        let chat_id = shared_state.selected_chat_id.unwrap_or_default();
+        let shared_state = state.shared_state();
+        let account_id = shared_state
+            .shared_state
+            .selected_account
+            .unwrap_or_default();
+        let chat_id = shared_state
+            .shared_state
+            .selected_chat_id
+            .unwrap_or_default();
         let id = format!("profile-image-{}-{}-{}", account_id, chat_id, msg.from_id);
 
         let image = msg.from_profile_image.clone().and_then(|image_path| {
@@ -204,22 +320,20 @@ fn view_avatar_message(
                     .color(text_color),
                 );
             });
-            view_inner_message(ui, state, shared_state, msg);
+            view_inner_message(ui, state, &shared_state.shared_state, msg);
         });
-    });
+    })
+    .response
 }
 
 /// Renders a message without avatar, just the content
-fn view_simple_message(
-    ui: &mut Ui,
-    state: &AppState,
-    shared_state: &SharedState,
-    msg: &InnerChatMessage,
-) {
+fn view_simple_message(ui: &mut Ui, state: &AppState, msg: &InnerChatMessage) -> Response {
     ui.horizontal(|ui| {
         ui.add_space(48.);
-        view_inner_message(ui, state, shared_state, msg);
-    });
+        let shared_state = state.shared_state();
+        view_inner_message(ui, state, &shared_state.shared_state, msg);
+    })
+    .response
 }
 
 fn view_inner_message(
@@ -254,25 +368,11 @@ fn view_inner_message(
             match msg.viewtype {
                 Viewtype::Image | Viewtype::Gif => {
                     if let Some(path) = msg.file.clone() {
-                        let account_id = shared_state.selected_account.unwrap_or_default();
-                        let chat_id = shared_state.selected_chat_id.unwrap_or_default();
-                        let id = format!("image-{}-{}-{}", account_id, chat_id, msg.id);
-
-                        if let Some(image) = state.get_or_load_image(ui.ctx(), id, move |_name| {
-                            image::load_image_from_path(&path)
-                        }) {
+                        if let Some(image) = load_image(state, shared_state, ui.ctx(), msg.id, path)
+                        {
                             let max_width = ui.available_width() - 10.;
-                            let image_size = image.size();
-
-                            let size = if max_width < image_size[0] as f32 {
-                                // too wide, scale down
-                                let factor = image_size[0] as f32 / max_width;
-                                [max_width, image_size[1] as f32 / factor]
-                            } else {
-                                // wide enough
-                                [image_size[0] as f32, image_size[1] as f32]
-                            };
-                            ui.image(image.id(), size);
+                            let size = calc_image_size(&image, max_width);
+                            ui.image(SizedTexture::new(image.id(), size));
                         }
                     }
                 }
@@ -306,6 +406,32 @@ fn view_inner_message(
             }
         });
     });
+}
+
+fn calc_image_size(image: &TextureHandle, max_width: f32) -> [f32; 2] {
+    let image_size = image.size();
+    if max_width < image_size[0] as f32 {
+        // too wide, scale down
+        let factor = image_size[0] as f32 / max_width;
+        [max_width, image_size[1] as f32 / factor]
+    } else {
+        // wide enough
+        [image_size[0] as f32, image_size[1] as f32]
+    }
+}
+
+fn load_image(
+    state: &AppState,
+    shared_state: &SharedState,
+    ctx: &Context,
+    msg_id: u32,
+    path: PathBuf,
+) -> Option<TextureHandle> {
+    let account_id = shared_state.selected_account.unwrap_or_default();
+    let chat_id = shared_state.selected_chat_id.unwrap_or_default();
+    let id = format!("image-{}-{}-{}", account_id, chat_id, msg_id);
+
+    state.get_or_load_image(ctx, id, move |_name| image::load_image_from_path(&path))
 }
 
 fn selectable_text<'a>(
