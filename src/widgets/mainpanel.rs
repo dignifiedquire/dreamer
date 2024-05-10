@@ -22,35 +22,38 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
         .frame(Frame::default().fill(Color32::WHITE))
         .show(ctx, |ui| {
+            let can_send = state.shared_state().shared_state.selected_chat.clone().map(|chat_state|chat_state.can_send).unwrap_or(false);
             // show the input-field for new messages
-            TopBottomPanel::bottom("input")
-                .frame(
-                    Frame::default()
-                        .fill(Color32::LIGHT_GRAY)
-                        .inner_margin(Margin::same(2.)),
-                )
-                .show_inside(ui, |ui| {
-                    ui.with_layout(
-                        egui::Layout::top_down_justified(egui::Align::Center),
-                        |ui| {
-                            let response =
-                                ui.add(egui::TextEdit::singleline(&mut state.current_input));
-                            if response.lost_focus()
-                                && ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            {
-                                let message = std::mem::take(&mut state.current_input);
-                                if message.len() > 0 {
-                                    state.send_command(Command::SendTextMessage(message));
-                                }
-
-                                let text_edit_id = response.id;
-
-                                // reselect focus
-                                ui.ctx().memory_mut(|m| m.request_focus(text_edit_id));
-                            }
-                        },
+            if can_send {
+                TopBottomPanel::bottom("input")
+                    .frame(
+                        Frame::default()
+                            .fill(Color32::LIGHT_GRAY)
+                            .inner_margin(Margin::same(2.)),
                     )
-                });
+                    .show_inside(ui, |ui| {
+                        ui.with_layout(
+                            egui::Layout::top_down_justified(egui::Align::Center),
+                            |ui| {
+                                let response =
+                                    ui.add(egui::TextEdit::singleline(&mut state.current_input));
+                                if response.lost_focus()
+                                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                                {
+                                    let message = std::mem::take(&mut state.current_input);
+                                    if message.len() > 0 {
+                                        state.send_command(Command::SendTextMessage(message));
+                                    }
+    
+                                    let text_edit_id = response.id;
+    
+                                    // reselect focus
+                                    ui.ctx().memory_mut(|m| m.request_focus(text_edit_id));
+                                }
+                            },
+                        )
+                    });
+            }
 
             TopBottomPanel::top("chat")
                 .frame(Frame::default().fill(Color32::WHITE))
