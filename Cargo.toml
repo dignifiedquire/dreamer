@@ -23,7 +23,7 @@ broadcaster = "1.0.0"
 dirs = "4.0"
 lazy_static = "1.4.0"
 glob = "0.3.0"
-deltachat = { git = "http://github.com/deltachat/deltachat-core-rust", branch = "master" }
+deltachat = { git = "http://github.com/deltachat/deltachat-core-rust", branch = "main" }
 image = "0.24.1"
 
 [features]

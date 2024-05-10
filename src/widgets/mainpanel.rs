@@ -192,11 +192,11 @@ fn calc_line_height(
     let top_margin = 10.;
     let font_size = 14.;
 
-    let total_text_len = msg.text.as_ref().map(|t| t.len()).unwrap_or(0)
+    let total_text_len = msg.text.len()
         + msg
             .quote
             .as_ref()
-            .and_then(|q| q.text.as_ref())
+            .and_then(|q| Some(q.text.clone()))
             .map(|t| t.len())
             .unwrap_or(0);
 
@@ -254,9 +254,9 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) -> 
     ui.vertical_centered(|ui| {
         let text_color = Color32::from_rgb(41, 51, 63);
 
-        if let Some(ref text) = msg.text {
+        if !msg.text.is_empty() {
             ui.label(
-                RichText::new(text)
+                RichText::new(msg.text.clone())
                     .size(14.)
                     .color(text_color)
                     .family(egui::FontFamily::Name(FONT_REGULAR.into())),
@@ -349,7 +349,7 @@ fn view_inner_message(
         // TODO: render other message types
 
         ui.vertical(|ui| {
-            if let Some(text) = msg.quote.as_ref().and_then(|q| q.text.as_ref()) {
+            if let Some(text) = msg.quote.as_ref().map(|q| q.text.clone()) {
                 // TODO: render other types than text
 
                 ui.horizontal(|ui| {
@@ -396,9 +396,9 @@ fn view_inner_message(
             }
 
             // render additional in all cases text
-            if let Some(ref text) = msg.text {
+            if !msg.text.is_empty() {
                 ui.add(selectable_text(
-                    &mut text.as_str(),
+                    &mut msg.text.as_str(),
                     14.,
                     FONT_REGULAR,
                     text_color,

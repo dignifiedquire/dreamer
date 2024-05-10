@@ -131,7 +131,7 @@ pub struct InnerChatMessage {
     pub from_color: u32,
     pub viewtype: Viewtype,
     pub state: String,
-    pub text: Option<String>,
+    pub text: String,
     pub quote: Option<Box<InnerChatMessage>>,
     pub timestamp: Option<DateTime<Utc>>,
     pub is_info: bool,

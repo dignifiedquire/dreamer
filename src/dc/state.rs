@@ -155,7 +155,7 @@ impl LocalState {
                         Event::MessageIncoming {
                             chat_id: chat_id.to_u32(),
                             title: chat.get_name().to_string(),
-                            body: msg.get_text().unwrap_or_default(),
+                            body: msg.get_text(),
                         },
                     ))
                     .await?;
@@ -483,7 +483,7 @@ impl LocalState {
         &self,
         typ: Viewtype,
         path: String,
-        text: Option<String>,
+        text: String,
         mime: Option<String>,
     ) -> Result<()> {
         let ls = self.inner.read().await;
@@ -516,7 +516,7 @@ impl LocalStateInner {
 
         // load accounts from default dir
         let mut account_states = HashMap::new();
-        let accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone()).await?;
+        let mut accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone(), true).await?;
         let account_ids = accounts.get_all();
 
         if account_ids.len() == 0 {

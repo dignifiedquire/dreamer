@@ -14,7 +14,6 @@ use deltachat::{
     message::{self, MsgId},
     EventType,
 };
-use futures::StreamExt;
 use lazy_static::lazy_static;
 use log::*;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -73,8 +72,8 @@ impl Account {
             .await
             .map_err(|err| anyhow!("{}", err))?;
 
-        let mut events = context.get_event_emitter();
-        while let Some(event) = events.next().await {
+        let events = context.get_event_emitter();
+        while let Some(event) = events.recv().await {
             match event.typ {
                 EventType::ImexProgress(0) => {
                     bail!("Failed to import");
@@ -121,8 +120,8 @@ impl Account {
                 .await
                 .map_err(|err| anyhow!("{:?}", err))?;
 
-            let mut events = context.get_event_emitter();
-            while let Some(event) = events.next().await {
+            let events = context.get_event_emitter();
+            while let Some(event) = events.recv().await {
                 info!("configure event {:?}", event);
                 match event.typ {
                     EventType::ConfigureProgress { progress, .. } => match progress {
@@ -282,7 +281,7 @@ impl Account {
         context: &Context,
         typ: Viewtype,
         path: String,
-        text: Option<String>,
+        text: String,
         mime: Option<String>,
     ) -> Result<()> {
         if let Some(chat_id) = self.state.read().await.selected_chat_id {
@@ -430,7 +429,7 @@ async fn refresh_message_list(
                 let from = match contacts.get(&msg.get_from_id()) {
                     Some(contact) => contact,
                     None => {
-                        let contact = Contact::load_from_db(&context, msg.get_from_id())
+                        let contact = Contact::get_by_id(&context, msg.get_from_id())
                             .await
                             .map_err(|err| {
                                 anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err)
@@ -493,7 +492,7 @@ async fn load_quote(
     let from = match contacts.get(&msg.get_from_id()) {
         Some(contact) => contact,
         None => {
-            let contact = Contact::load_from_db(&context, msg.get_from_id())
+            let contact = Contact::get_by_id(&context, msg.get_from_id())
                 .await
                 .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
             contacts.insert(msg.get_from_id(), contact);
