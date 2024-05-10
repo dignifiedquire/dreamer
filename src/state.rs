@@ -36,7 +36,7 @@ impl UiCache {
 
     pub fn set_message_height(&mut self, id: u32, width: f32, height: f32) {
         let entries = self.message_heights.entry(id).or_default();
-        if entries.iter().find(|(w, _)| w == &width).is_some() {
+        if entries.iter().any(|(w, _)| w == &width) {
             // already exists
             return;
         }

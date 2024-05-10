@@ -47,7 +47,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                     && ui.input(|i| i.key_pressed(egui::Key::Enter))
                                 {
                                     let message = std::mem::take(&mut state.current_input);
-                                    if message.len() > 0 {
+                                    if !message.is_empty() {
                                         state.send_command(Command::SendTextMessage(message));
                                     }
 
