@@ -14,7 +14,6 @@ use deltachat::{
     message::{self, MsgId},
     EventType,
 };
-use futures::StreamExt;
 use lazy_static::lazy_static;
 use log::*;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -73,8 +72,8 @@ impl Account {
             .await
             .map_err(|err| anyhow!("{}", err))?;
 
-        let mut events = context.get_event_emitter();
-        while let Some(event) = events.next().await {
+        let events = context.get_event_emitter();
+        while let Some(event) = events.recv().await {
             match event.typ {
                 EventType::ImexProgress(0) => {
                     bail!("Failed to import");
@@ -114,15 +113,15 @@ impl Account {
         let is_configured = context.get_config_int(Config::Configured).await?;
         if is_configured == 1 {
             info!("Account already configured");
-            return Ok(());
+            Ok(())
         } else {
             context
                 .configure()
                 .await
                 .map_err(|err| anyhow!("{:?}", err))?;
 
-            let mut events = context.get_event_emitter();
-            while let Some(event) = events.next().await {
+            let events = context.get_event_emitter();
+            while let Some(event) = events.recv().await {
                 info!("configure event {:?}", event);
                 match event.typ {
                     EventType::ConfigureProgress { progress, .. } => match progress {
@@ -154,7 +153,7 @@ impl Account {
             ensure!(a <= b, "invalid indicies");
         }
 
-        let chatlist = Chatlist::try_load(&context, 0, None, None)
+        let chatlist = Chatlist::try_load(context, 0, None, None)
             .await
             .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
         let total_len = chatlist.len();
@@ -181,7 +180,7 @@ impl Account {
         info!("selecting chat {:?}", chat_id);
         let mut ls = self.state.write().await;
         ls.selected_chat_id = Some(chat_id);
-        let chatlist = Chatlist::try_load(&context, 0, None, None)
+        let chatlist = Chatlist::try_load(context, 0, None, None)
             .await
             .map_err(|err| anyhow!("failed to load chats: {:?}", err))?;
         let (_, selected_chat) = load_chat_state(context.clone(), chat_id, &chatlist).await?;
@@ -239,7 +238,7 @@ impl Account {
         context: &Context,
         range: Option<(usize, usize)>,
     ) -> Result<(u32, (usize, usize), Vec<ChatItem>, Vec<ChatMessage>)> {
-        let chat_id = self.state.read().await.selected_chat_id.clone();
+        let chat_id = self.state.read().await.selected_chat_id;
         if let Some(chat_id) = chat_id {
             info!("loading {:?} msgs", chat_id);
 
@@ -267,7 +266,7 @@ impl Account {
 
     pub async fn send_text_message(&self, context: &Context, text: String) -> Result<()> {
         if let Some(chat_id) = self.state.read().await.selected_chat_id {
-            chat::send_text_msg(&context, chat_id, text)
+            chat::send_text_msg(context, chat_id, text)
                 .await
                 .map_err(|err| anyhow!("failed to send message: {}", err))?;
         } else {
@@ -282,7 +281,7 @@ impl Account {
         context: &Context,
         typ: Viewtype,
         path: String,
-        text: Option<String>,
+        text: String,
         mime: Option<String>,
     ) -> Result<()> {
         if let Some(chat_id) = self.state.read().await.selected_chat_id {
@@ -292,7 +291,7 @@ impl Account {
             msg.set_text(text);
             msg.set_file(path, mime.as_deref());
 
-            chat::send_msg(&context, chat_id, &mut msg)
+            chat::send_msg(context, chat_id, &mut msg)
                 .await
                 .map_err(|err| anyhow!("failed to send message: {}", err))?;
         } else {
@@ -303,12 +302,12 @@ impl Account {
     }
 
     pub async fn accept_contact_request(&self, context: &Context, chat_id: ChatId) -> Result<()> {
-        chat_id.accept(&context).await?;
+        chat_id.accept(context).await?;
         Ok(())
     }
 
     pub async fn block_contact(&self, context: &Context, chat_id: ChatId) -> Result<()> {
-        chat_id.block(&context).await?;
+        chat_id.block(context).await?;
         Ok(())
     }
 }
@@ -405,7 +404,7 @@ async fn refresh_message_list(
     let total_len = chat_items.len();
 
     // default to all
-    let range = range.unwrap_or_else(|| (0, total_len));
+    let range = range.unwrap_or((0, total_len));
 
     info!(
         "loading chat messages {:?} from ({}..={})",
@@ -430,7 +429,7 @@ async fn refresh_message_list(
                 let from = match contacts.get(&msg.get_from_id()) {
                     Some(contact) => contact,
                     None => {
-                        let contact = Contact::load_from_db(&context, msg.get_from_id())
+                        let contact = Contact::get_by_id(&context, msg.get_from_id())
                             .await
                             .map_err(|err| {
                                 anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err)
@@ -442,12 +441,10 @@ async fn refresh_message_list(
 
                 let is_first = if last_marker {
                     true
+                } else if let Some(id) = last_contact_id {
+                    id != msg.get_from_id()
                 } else {
-                    if let Some(id) = last_contact_id {
-                        id != msg.get_from_id()
-                    } else {
-                        true
-                    }
+                    true
                 };
                 last_contact_id = Some(msg.get_from_id());
                 last_marker = false;
@@ -493,7 +490,7 @@ async fn load_quote(
     let from = match contacts.get(&msg.get_from_id()) {
         Some(contact) => contact,
         None => {
-            let contact = Contact::load_from_db(&context, msg.get_from_id())
+            let contact = Contact::get_by_id(context, msg.get_from_id())
                 .await
                 .map_err(|err| anyhow!("failed to load contact: {}: {}", msg.get_from_id(), err))?;
             contacts.insert(msg.get_from_id(), contact);
@@ -506,14 +503,14 @@ async fn load_quote(
         from_id: msg.get_from_id().to_u32(),
         viewtype: Viewtype::from_i32(msg.get_viewtype().to_i32().unwrap()).unwrap(),
         from_first_name: from.get_display_name().to_string(),
-        from_profile_image: from.get_profile_image(&context).await?.map(Into::into),
+        from_profile_image: from.get_profile_image(context).await?.map(Into::into),
         from_color: from.get_color(),
         state: msg.get_state().to_string(),
         text: msg.get_text(),
         quote: None,
         timestamp: get_timestamp(msg.get_sort_timestamp()),
         is_info: msg.is_info(),
-        file: msg.get_file(&context).map(Into::into),
+        file: msg.get_file(context).map(Into::into),
         file_width: msg.get_width(),
         file_height: msg.get_height(),
         is_first: true,

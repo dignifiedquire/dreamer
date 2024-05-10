@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use egui::{
-    load::SizedTexture, style::Margin, CentralPanel, Color32, Context, Frame, Response, RichText,
-    Rounding, TextEdit, TopBottomPanel, Ui, Vec2, Widget,
+    load::SizedTexture, CentralPanel, Color32, Context, Frame, Response, RichText, Rounding,
+    TextEdit, TopBottomPanel, Ui, Vec2, Widget,
 };
 use egui_extras::{Column, TableBuilder};
-use epaint::{FontId, Stroke, TextureHandle};
+use epaint::{FontId, Margin, Stroke, TextureHandle};
 use log::{info, warn};
 
 use crate::{
@@ -22,35 +22,44 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
         .frame(Frame::default().fill(Color32::WHITE))
         .show(ctx, |ui| {
+            let can_send = state
+                .shared_state()
+                .shared_state
+                .selected_chat
+                .clone()
+                .map(|chat_state| chat_state.can_send)
+                .unwrap_or(false);
             // show the input-field for new messages
-            TopBottomPanel::bottom("input")
-                .frame(
-                    Frame::default()
-                        .fill(Color32::LIGHT_GRAY)
-                        .inner_margin(Margin::same(2.)),
-                )
-                .show_inside(ui, |ui| {
-                    ui.with_layout(
-                        egui::Layout::top_down_justified(egui::Align::Center),
-                        |ui| {
-                            let response =
-                                ui.add(egui::TextEdit::singleline(&mut state.current_input));
-                            if response.lost_focus()
-                                && ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            {
-                                let message = std::mem::take(&mut state.current_input);
-                                if message.len() > 0 {
-                                    state.send_command(Command::SendTextMessage(message));
-                                }
-
-                                let text_edit_id = response.id;
-
-                                // reselect focus
-                                ui.ctx().memory_mut(|m| m.request_focus(text_edit_id));
-                            }
-                        },
+            if can_send {
+                TopBottomPanel::bottom("input")
+                    .frame(
+                        Frame::default()
+                            .fill(Color32::LIGHT_GRAY)
+                            .inner_margin(Margin::same(2.)),
                     )
-                });
+                    .show_inside(ui, |ui| {
+                        ui.with_layout(
+                            egui::Layout::top_down_justified(egui::Align::Center),
+                            |ui| {
+                                let response =
+                                    ui.add(egui::TextEdit::singleline(&mut state.current_input));
+                                if response.lost_focus()
+                                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                                {
+                                    let message = std::mem::take(&mut state.current_input);
+                                    if !message.is_empty() {
+                                        state.send_command(Command::SendTextMessage(message));
+                                    }
+
+                                    let text_edit_id = response.id;
+
+                                    // reselect focus
+                                    ui.ctx().memory_mut(|m| m.request_focus(text_edit_id));
+                                }
+                            },
+                        )
+                    });
+            }
 
             TopBottomPanel::top("chat")
                 .frame(Frame::default().fill(Color32::WHITE))
@@ -105,7 +114,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                             height
                                         } else {
                                             let height = calc_height(
-                                                &state,
+                                                state,
                                                 &shared_state.shared_state,
                                                 &ctx,
                                                 width,
@@ -116,8 +125,8 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                         }
                                     });
 
-                                    body.heterogeneous_rows(row_heights, |row_index, mut row| {
-                                        let msg = msgs[row_index].clone();
+                                    body.heterogeneous_rows(row_heights, |mut row| {
+                                        let msg = msgs[row.index()].clone();
                                         row.col(|ui| {
                                             ui.add(ChatMessageWidget {
                                                 state: state.clone(),
@@ -192,13 +201,7 @@ fn calc_line_height(
     let top_margin = 10.;
     let font_size = 14.;
 
-    let total_text_len = msg.text.as_ref().map(|t| t.len()).unwrap_or(0)
-        + msg
-            .quote
-            .as_ref()
-            .and_then(|q| q.text.as_ref())
-            .map(|t| t.len())
-            .unwrap_or(0);
+    let total_text_len = msg.text.len() + msg.quote.as_ref().map(|q| q.text.len()).unwrap_or(0);
 
     let text_height = if total_text_len > 0 {
         // TODO: less naive
@@ -254,9 +257,9 @@ fn view_info_message(ui: &mut Ui, _state: &AppState, msg: &InnerChatMessage) -> 
     ui.vertical_centered(|ui| {
         let text_color = Color32::from_rgb(41, 51, 63);
 
-        if let Some(ref text) = msg.text {
+        if !msg.text.is_empty() {
             ui.label(
-                RichText::new(text)
+                RichText::new(msg.text.clone())
                     .size(14.)
                     .color(text_color)
                     .family(egui::FontFamily::Name(FONT_REGULAR.into())),
@@ -349,7 +352,7 @@ fn view_inner_message(
         // TODO: render other message types
 
         ui.vertical(|ui| {
-            if let Some(text) = msg.quote.as_ref().and_then(|q| q.text.as_ref()) {
+            if let Some(text) = msg.quote.as_ref().map(|q| q.text.clone()) {
                 // TODO: render other types than text
 
                 ui.horizontal(|ui| {
@@ -396,9 +399,9 @@ fn view_inner_message(
             }
 
             // render additional in all cases text
-            if let Some(ref text) = msg.text {
+            if !msg.text.is_empty() {
                 ui.add(selectable_text(
-                    &mut text.as_str(),
+                    &mut msg.text.as_str(),
                     14.,
                     FONT_REGULAR,
                     text_color,

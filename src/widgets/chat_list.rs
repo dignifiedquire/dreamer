@@ -1,9 +1,8 @@
 use std::borrow::Cow;
 
-use egui::{
-    style::Margin, Color32, Frame, RichText, Rounding, ScrollArea, Sense, SidePanel, Stroke, Ui,
-    Vec2,
-};
+use egui::{Color32, Frame, RichText, Rounding, ScrollArea, Sense, SidePanel, Stroke, Ui, Vec2};
+
+use epaint::Margin;
 
 use crate::{
     app::{FONT_REGULAR, FONT_SEMI_BOLD},

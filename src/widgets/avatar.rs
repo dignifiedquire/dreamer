@@ -1,10 +1,10 @@
 use egui::load::SizedTexture;
 use egui::widgets::Image;
-use egui::{
-    style::Margin, Color32, Layout, Response, RichText, Rounding, Sense, Stroke, TextureHandle, Ui,
+use egui::{ Color32, Layout, Response, RichText, Rounding, Sense, Stroke, TextureHandle, Ui,
     Vec2, Widget,
 };
 use egui::{TextStyle, WidgetText};
+use epaint::Margin;
 
 use crate::app::FONT_SEMI_BOLD;
 
@@ -97,11 +97,11 @@ impl Widget for Avatar {
                 // center layout
                 let text_pos = Layout::centered_and_justified(egui::Direction::LeftToRight)
                     .with_cross_justify(true)
-                    .align_size_within_rect(text.size(), rect.shrink2(padding))
-                    .min;
+                    .align_size_within_rect(text.size(), rect.shrink2(padding));
+
                 let visuals = ui.style().interact(&response);
 
-                text.paint_with_visuals(ui.painter(), text_pos, visuals);
+                ui.painter().galley(text_pos.min, text, visuals.text_color());
             }
 
             ui.painter()

@@ -5,10 +5,10 @@ edition = "2021"
 rust-version = "1.60"
 
 [dependencies]
-eframe = { version = "0.24" }
-egui = { version = "0.24", features = ["persistence", "serde"] }
-egui_extras = { version = "0.24" }
-epaint = "0.24"
+eframe = { version = "0.27.2" }
+egui = { version = "0.27.2", features = ["persistence", "serde"] }
+egui_extras = { version = "0.27.2" }
+epaint = "0.27.2"
 tracing-subscriber = "0.3"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
@@ -23,7 +23,7 @@ broadcaster = "1.0.0"
 dirs = "4.0"
 lazy_static = "1.4.0"
 glob = "0.3.0"
-deltachat = { git = "http://github.com/deltachat/deltachat-core-rust", branch = "master" }
+deltachat = { git = "http://github.com/deltachat/deltachat-core-rust", branch = "main" }
 image = "0.24.1"
 
 [features]

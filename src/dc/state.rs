@@ -155,7 +155,7 @@ impl LocalState {
                         Event::MessageIncoming {
                             chat_id: chat_id.to_u32(),
                             title: chat.get_name().to_string(),
-                            body: msg.get_text().unwrap_or_default(),
+                            body: msg.get_text(),
                         },
                     ))
                     .await?;
@@ -217,7 +217,7 @@ impl LocalState {
             .account_states
             .get(&id)
             .unwrap()
-            .login(&ctx, &email, &password)
+            .login(ctx, email, password)
             .await;
         if let Err(err) = res {
             let mut ls = self.inner.write().await;
@@ -274,7 +274,7 @@ impl LocalState {
             .account_states
             .get(&id)
             .unwrap()
-            .import(&ctx, path)
+            .import(ctx, path)
             .await;
         if let Err(err) = res {
             let mut ls = self.inner.write().await;
@@ -483,7 +483,7 @@ impl LocalState {
         &self,
         typ: Viewtype,
         path: String,
-        text: Option<String>,
+        text: String,
         mime: Option<String>,
     ) -> Result<()> {
         let ls = self.inner.read().await;
@@ -516,10 +516,10 @@ impl LocalStateInner {
 
         // load accounts from default dir
         let mut account_states = HashMap::new();
-        let accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone()).await?;
+        let mut accounts = deltachat::accounts::Accounts::new(HOME_DIR.clone(), true).await?;
         let account_ids = accounts.get_all();
 
-        if account_ids.len() == 0 {
+        if account_ids.is_empty() {
             panic!(
                 "There are no available acccounts in your accounts.toml file: {}",
                 HOME_DIR.to_str().unwrap()
@@ -547,11 +547,7 @@ impl LocalStateInner {
     pub async fn get_selected_account(&self) -> Option<(&Account, deltachat::context::Context)> {
         if let Some(ctx) = self.accounts.get_selected_account() {
             let id = ctx.get_id();
-            if let Some(account) = self.account_states.get(&id) {
-                Some((account, ctx))
-            } else {
-                None
-            }
+            self.account_states.get(&id).map(|account| (account, ctx))
         } else {
             None
         }
@@ -563,11 +559,7 @@ impl LocalStateInner {
     }
 
     pub async fn get_selected_account_id(&self) -> Option<u32> {
-        if let Some(ctx) = self.accounts.get_selected_account() {
-            Some(ctx.get_id())
-        } else {
-            None
-        }
+        self.accounts.get_selected_account().map(|ctx| ctx.get_id())
     }
 
     pub async fn get_selected_account_state(&self) -> Option<&Account> {
@@ -607,7 +599,7 @@ impl LocalStateInner {
         let (selected_chat_id, selected_chat) =
             if let Some(account) = self.get_selected_account_state().await {
                 let state = account.state.read().await;
-                (state.selected_chat_id.clone(), state.selected_chat.clone())
+                (state.selected_chat_id, state.selected_chat.clone())
             } else {
                 (None, None)
             };
