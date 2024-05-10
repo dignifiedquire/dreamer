@@ -114,7 +114,7 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                             height
                                         } else {
                                             let height = calc_height(
-                                                &state,
+                                                state,
                                                 &shared_state.shared_state,
                                                 &ctx,
                                                 width,
@@ -201,13 +201,7 @@ fn calc_line_height(
     let top_margin = 10.;
     let font_size = 14.;
 
-    let total_text_len = msg.text.len()
-        + msg
-            .quote
-            .as_ref()
-            .and_then(|q| Some(q.text.clone()))
-            .map(|t| t.len())
-            .unwrap_or(0);
+    let total_text_len = msg.text.len() + msg.quote.as_ref().map(|q| q.text.len()).unwrap_or(0);
 
     let text_height = if total_text_len > 0 {
         // TODO: less naive
