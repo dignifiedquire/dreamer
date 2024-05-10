@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use egui::{
-    load::SizedTexture, style::Margin, CentralPanel, Color32, Context, Frame, Response, RichText,
-    Rounding, TextEdit, TopBottomPanel, Ui, Vec2, Widget,
+    load::SizedTexture, CentralPanel, Color32, Context, Frame, Response, RichText, Rounding,
+    TextEdit, TopBottomPanel, Ui, Vec2, Widget,
 };
 use egui_extras::{Column, TableBuilder};
-use epaint::{FontId, Stroke, TextureHandle};
+use epaint::{FontId, Margin, Stroke, TextureHandle};
 use log::{info, warn};
 
 use crate::{
@@ -22,7 +22,13 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
     CentralPanel::default()
         .frame(Frame::default().fill(Color32::WHITE))
         .show(ctx, |ui| {
-            let can_send = state.shared_state().shared_state.selected_chat.clone().map(|chat_state|chat_state.can_send).unwrap_or(false);
+            let can_send = state
+                .shared_state()
+                .shared_state
+                .selected_chat
+                .clone()
+                .map(|chat_state| chat_state.can_send)
+                .unwrap_or(false);
             // show the input-field for new messages
             if can_send {
                 TopBottomPanel::bottom("input")
@@ -44,9 +50,9 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                     if message.len() > 0 {
                                         state.send_command(Command::SendTextMessage(message));
                                     }
-    
+
                                     let text_edit_id = response.id;
-    
+
                                     // reselect focus
                                     ui.ctx().memory_mut(|m| m.request_focus(text_edit_id));
                                 }
@@ -119,8 +125,8 @@ pub fn render_main_panel(ctx: &Context, state: &mut AppState) {
                                         }
                                     });
 
-                                    body.heterogeneous_rows(row_heights, |row_index, mut row| {
-                                        let msg = msgs[row_index].clone();
+                                    body.heterogeneous_rows(row_heights, |mut row| {
+                                        let msg = msgs[row.index()].clone();
                                         row.col(|ui| {
                                             ui.add(ChatMessageWidget {
                                                 state: state.clone(),
